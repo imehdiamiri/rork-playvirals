@@ -2,8 +2,15 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, useRef } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, View } from 'react-native';
 import 'react-native-reanimated';
+import {
+  useFonts,
+  Fredoka_400Regular,
+  Fredoka_500Medium,
+  Fredoka_600SemiBold,
+  Fredoka_700Bold,
+} from '@expo-google-fonts/fredoka';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthStore } from '@/src/store/useAuthStore';
@@ -28,6 +35,18 @@ export default function RootLayout() {
 
   const [isMounted, setIsMounted] = useState(false);
   const appState = useRef<AppStateStatus>(AppState.currentState);
+
+  // Load unified rounded display font; aliased to legacy 'Viral-*' names so all
+  // existing screens render the same chunky rounded face on iOS and Android.
+  const [fontsLoaded] = useFonts({
+    'Viral-Black': Fredoka_700Bold,
+    'Viral-Bold': Fredoka_600SemiBold,
+    'Viral-Regular': Fredoka_500Medium,
+    'Fredoka_400Regular': Fredoka_400Regular,
+    'Fredoka_500Medium': Fredoka_500Medium,
+    'Fredoka_600SemiBold': Fredoka_600SemiBold,
+    'Fredoka_700Bold': Fredoka_700Bold,
+  });
 
   // Preload sound effects
   useAudioPreload();
@@ -87,6 +106,10 @@ export default function RootLayout() {
 
     return () => clearTimeout(timer);
   }, [currentUser, isInitialized, segments, navigationState?.key, hasCompletedOnboarding, isMounted]);
+
+  if (!fontsLoaded) {
+    return <View style={{ flex: 1, backgroundColor: 'black' }} />;
+  }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

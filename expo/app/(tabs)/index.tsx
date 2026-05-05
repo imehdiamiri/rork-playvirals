@@ -78,23 +78,33 @@ export default function GamesScreen() {
                 onPress={() => setSelectedModeFilter(null)}
                 activeOpacity={0.7}
               >
+                <IconSymbol
+                  name="square.grid.2x2.fill"
+                  size={13}
+                  color={selectedModeFilter === null ? 'white' : 'rgba(255,255,255,0.55)'}
+                />
                 <Text style={[styles.modeFilterText, selectedModeFilter === null && styles.modeFilterTextActive]}>All</Text>
               </TouchableOpacity>
-              {Object.values(GameMode).map(mode => (
-                <TouchableOpacity 
-                  key={mode}
-                  style={[styles.modeFilterChip, selectedModeFilter === mode && styles.modeFilterChipActive]}
-                  onPress={() => setSelectedModeFilter(mode)}
-                  activeOpacity={0.7}
-                >
-                  {selectedModeFilter === mode && (
-                    <IconSymbol name={GameModeDetails[mode].icon as any} size={12} color="white" />
-                  )}
-                  <Text style={[styles.modeFilterText, selectedModeFilter === mode && styles.modeFilterTextActive]}>
-                    {GameModeDetails[mode].title}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {Object.values(GameMode).map(mode => {
+                const isActive = selectedModeFilter === mode;
+                return (
+                  <TouchableOpacity 
+                    key={mode}
+                    style={[styles.modeFilterChip, isActive && styles.modeFilterChipActive]}
+                    onPress={() => setSelectedModeFilter(mode)}
+                    activeOpacity={0.7}
+                  >
+                    <IconSymbol
+                      name={GameModeDetails[mode].icon as any}
+                      size={13}
+                      color={isActive ? 'white' : 'rgba(255,255,255,0.55)'}
+                    />
+                    <Text style={[styles.modeFilterText, isActive && styles.modeFilterTextActive]}>
+                      {GameModeDetails[mode].title}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
 
             {/* Game Grid */}
@@ -224,10 +234,10 @@ const styles = StyleSheet.create({
   modeFilterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)',
     backgroundColor: Platform.OS === 'android' ? Colors.surface2 : 'rgba(255,255,255,0.06)',
@@ -238,8 +248,9 @@ const styles = StyleSheet.create({
   },
   modeFilterText: {
     color: 'rgba(255,255,255,0.55)',
-    fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Viral-Black',
+    fontSize: 13,
+    includeFontPadding: false,
   },
   modeFilterTextActive: {
     color: '#ffffff',

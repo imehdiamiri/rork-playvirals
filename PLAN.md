@@ -1,13 +1,6 @@
-# Fix Metro "Script not found expo" error
+# Unified rounded display font + filter chip refresh
 
-**The problem**
-
-The app fails to start because the Expo runtime can't be located. This usually happens when dependencies get out of sync.
-
-**The fix**
-
-- Reinstall the app's dependencies cleanly so the Expo runtime is found again.
-- Restart the bundler with a fresh cache.
-- Verify the app boots in the preview without errors.
-
-No design, screens, or features will change — this is purely a startup fix.
+- [x] Load Fredoka (Google Font) and alias it as `Viral-Black` / `Viral-Bold` / `Viral-Regular` so iOS & Android share the same chunky rounded display face.
+- [x] Show mode icons (1 Phone, Multi Phone, Team Mode) inside every filter chip — not only the active one — at unified size and spacing.
+- [x] Match the chip pill design from the reference: pill radius, padding, glass background, accent-blue active state.
+- [x] Use `Viral-Black` for chip labels so the typography is consistent everywhere.
