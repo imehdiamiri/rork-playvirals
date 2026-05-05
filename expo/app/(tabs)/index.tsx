@@ -80,8 +80,8 @@ export default function GamesScreen() {
               >
                 <IconSymbol
                   name="square.grid.2x2.fill"
-                  size={13}
-                  color={selectedModeFilter === null ? 'white' : 'rgba(255,255,255,0.55)'}
+                  size={11}
+                  color={selectedModeFilter === null ? Colors.blue : 'rgba(255,255,255,0.55)'}
                 />
                 <Text style={[styles.modeFilterText, selectedModeFilter === null && styles.modeFilterTextActive]}>All</Text>
               </TouchableOpacity>
@@ -96,8 +96,8 @@ export default function GamesScreen() {
                   >
                     <IconSymbol
                       name={GameModeDetails[mode].icon as any}
-                      size={13}
-                      color={isActive ? 'white' : 'rgba(255,255,255,0.55)'}
+                      size={11}
+                      color={isActive ? Colors.blue : 'rgba(255,255,255,0.55)'}
                     />
                     <Text style={[styles.modeFilterText, isActive && styles.modeFilterTextActive]}>
                       {GameModeDetails[mode].title}
@@ -228,32 +228,33 @@ const styles = StyleSheet.create({
   },
   modeFilterContainer: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
     paddingBottom: 20,
   },
   modeFilterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 22,
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    backgroundColor: Platform.OS === 'android' ? Colors.surface2 : 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: Platform.OS === 'android' ? Colors.surface2 : 'rgba(255,255,255,0.05)',
   },
   modeFilterChipActive: {
-    backgroundColor: 'rgba(10, 132, 255, 0.85)',
-    borderColor: 'rgba(10, 132, 255, 0.9)',
+    borderColor: 'rgba(10, 132, 255, 0.45)',
+    backgroundColor: 'rgba(10, 132, 255, 0.10)',
   },
   modeFilterText: {
-    color: 'rgba(255,255,255,0.55)',
-    fontFamily: 'Viral-Black',
-    fontSize: 13,
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+    fontWeight: '500',
     includeFontPadding: false,
   },
   modeFilterTextActive: {
-    color: '#ffffff',
+    color: Colors.blue,
+    fontWeight: '600',
   },
   gamesGrid: {
     flexDirection: 'row',
