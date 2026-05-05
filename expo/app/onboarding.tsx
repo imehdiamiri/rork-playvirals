@@ -324,6 +324,7 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH,
     height: '100%',
     justifyContent: 'center',
+    paddingBottom: 160,
   },
   iconSection: {
     height: 160,

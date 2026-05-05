@@ -114,6 +114,7 @@ const styles = StyleSheet.create({
   content: {
     ...StyleSheet.absoluteFillObject,
     paddingHorizontal: 10,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   spacer: {
@@ -156,6 +157,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'rgba(255,255,255,0.7)',
     marginTop: 4,
+    includeFontPadding: false,
   },
   borderOverlay: {
     ...StyleSheet.absoluteFillObject,
