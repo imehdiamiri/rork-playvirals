@@ -135,6 +135,8 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 56,
     height: 56,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
