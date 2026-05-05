@@ -135,8 +135,6 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 56,
     height: 56,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -147,8 +145,6 @@ const styles = StyleSheet.create({
   modeIconContainer: {
     width: 20,
     height: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
