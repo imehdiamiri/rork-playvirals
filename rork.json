@@ -1,0 +1,10 @@
+{
+  "$schema": "https://rork.com/schema/rork.json",
+  "apps": [
+    {
+      "name": "PlayVirals",
+      "path": "expo",
+      "framework": "react-native"
+    }
+  ]
+}
