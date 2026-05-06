@@ -1,6 +1,6 @@
 import { Colors } from '@/src/theme/Colors';
 import { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, TextInput, Share, Alert, Platform } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, TextInput, Share, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
@@ -24,11 +24,12 @@ const SurfaceBlur = ({ style, children, intensity = 25 }: any) => {
   return <View style={[style, { backgroundColor: 'rgba(20,20,30,0.92)' }]}>{children}</View>;
 };
 
+type TabKey = 'offline' | 'online' | 'rooms';
+
 export default function FriendsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  
-  // ─── Offline Friends (persisted via store) ───
+
   const { offlineFriends, addOfflineFriend, updateOfflineFriend, removeOfflineFriend,
           onlineFriends, friendRequests: requests,
           searchResults, isSearching, searchFriends,
@@ -37,14 +38,14 @@ export default function FriendsScreen() {
   const { currentUser } = useAuthStore();
   const currentUserId = currentUser?.uid || null;
 
-  const [draftFriendName, setDraftFriendName] = useState('');
+  const [activeTab, setActiveTab] = useState<TabKey>('offline');
+
+  const [draftFriendName, setDraftFriendName] = useState<string>('');
   const [editingOfflineFriendID, setEditingOfflineFriendID] = useState<string | null>(null);
-  const [editingOfflineFriendName, setEditingOfflineFriendName] = useState('');
+  const [editingOfflineFriendName, setEditingOfflineFriendName] = useState<string>('');
 
-  // Online search
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState<string>('');
 
-  // Load online friends & requests when logged in
   useEffect(() => {
     if (currentUserId) {
       loadFriends(currentUserId);
@@ -55,7 +56,6 @@ export default function FriendsScreen() {
   const handleAddOfflineFriend = () => {
     const trimmed = draftFriendName.trim();
     if (!trimmed) return;
-    // Duplicate check
     if (offlineFriends.some(f => f.name.toLowerCase() === trimmed.toLowerCase())) {
       showToast.warning('This name already exists!');
       return;
@@ -64,14 +64,9 @@ export default function FriendsScreen() {
     setDraftFriendName('');
   };
 
-  const handleRemoveOfflineFriend = (id: string) => {
-    removeOfflineFriend(id);
-  };
-
   const handleSaveEditOfflineFriend = () => {
     const trimmed = editingOfflineFriendName.trim();
     if (!trimmed || !editingOfflineFriendID) return;
-    // Duplicate check (excluding the current friend being edited)
     if (offlineFriends.some(f => f.id !== editingOfflineFriendID && f.name.toLowerCase() === trimmed.toLowerCase())) {
       showToast.warning('This name already exists!');
       return;
@@ -91,19 +86,22 @@ export default function FriendsScreen() {
     }
   };
 
-  const compactAvatar = (title: string, isOnline: boolean = false, size: number = 34) => (
+  const Avatar = ({ title, isOnline = false, size = 32 }: { title: string; isOnline?: boolean; size?: number }) => (
     <View style={[styles.avatarContainer, { width: size, height: size }]}>
       <Text style={[styles.avatarText, { fontSize: size * 0.42 }]}>
         {title.charAt(0).toUpperCase()}
       </Text>
       {isOnline && (
-        <View style={[styles.onlineDot, { 
-          width: Math.max(7, size * 0.28), 
-          height: Math.max(7, size * 0.28) 
-        }]} />
+        <View style={[styles.onlineDot, { width: Math.max(8, size * 0.28), height: Math.max(8, size * 0.28) }]} />
       )}
     </View>
   );
+
+  const tabs: { key: TabKey; label: string; icon: any; count?: number }[] = [
+    { key: 'offline', label: 'Local', icon: 'person.crop.circle', count: offlineFriends.length },
+    { key: 'online', label: 'Online', icon: 'globe', count: onlineFriends.length },
+    { key: 'rooms', label: 'Rooms', icon: 'person.3.fill' },
+  ];
 
   return (
     <View style={styles.container}>
@@ -111,16 +109,21 @@ export default function FriendsScreen() {
       <ScrollView 
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 6, paddingBottom: 120 }]}
         keyboardDismissMode="interactive"
+        showsVerticalScrollIndicator={false}
       >
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Friends</Text>
           <View style={{ flex: 1 }} />
           {requests.length > 0 && (
-            <View style={styles.notificationBadge}>
-              <IconSymbol name="bell.badge.fill" size={12} color="orange" />
+            <TouchableOpacity 
+              style={styles.notificationBadge}
+              onPress={() => setActiveTab('online')}
+              activeOpacity={0.8}
+            >
+              <IconSymbol name="bell.badge.fill" size={12} color={Colors.orange} />
               <Text style={styles.notificationText}>{requests.length}</Text>
-            </View>
+            </TouchableOpacity>
           )}
           <TouchableOpacity onPress={() => router.push('/profile')} activeOpacity={0.85}>
             <LiquidGlass variant="mid" radius={20} style={styles.profileButton} shadow={false}>
@@ -129,252 +132,305 @@ export default function FriendsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Quick Join Card */}
-        <SurfaceBlur intensity={30} style={styles.quickJoinCard}>
-          <View style={styles.quickJoinIconContainer}>
-            <IconSymbol name="number.square.fill" size={22} color={Colors.blue} />
-          </View>
-          <View style={styles.quickJoinTextContainer}>
-            <Text style={styles.quickJoinTitle}>Join with Code</Text>
-            <Text style={styles.quickJoinSubtitle}>Enter a room code to join instantly</Text>
-          </View>
-          <TouchableOpacity style={styles.quickJoinButton} onPress={() => router.push('/lobby/join')}>
-            <Text style={styles.quickJoinButtonText}>Enter Code</Text>
-          </TouchableOpacity>
-        </SurfaceBlur>
-
-        {/* Offline Friends Section */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Offline Friends</Text>
-          <Text style={styles.sectionSubtitle}>Local names for Single Device games.</Text>
-          
-          <SurfaceBlur style={styles.surfaceCard}>
-            <View style={styles.addFriendRow}>
-              <TextInput 
-                style={styles.inputField}
-                placeholder="Add name"
-                placeholderTextColor="rgba(255,255,255,0.4)"
-                autoCapitalize="words"
-                value={draftFriendName}
-                onChangeText={setDraftFriendName}
-              />
-              <TouchableOpacity style={styles.secondaryActionButton} onPress={handleAddOfflineFriend}>
-                <Text style={styles.secondaryActionButtonText}>Add</Text>
-              </TouchableOpacity>
+        {/* Quick Join — compact hero */}
+        <TouchableOpacity activeOpacity={0.9} onPress={() => router.push('/lobby/join')}>
+          <SurfaceBlur intensity={30} style={styles.heroCard}>
+            <View style={styles.heroIcon}>
+              <IconSymbol name="number.square.fill" size={20} color={Colors.blue} />
             </View>
-            
-            {offlineFriends.length === 0 ? (
-              <View style={styles.emptyStateContainer}>
-                <IconSymbol name="person.crop.circle.badge.plus" size={32} color="rgba(255,255,255,0.4)" />
-                <Text style={styles.emptyStateText}>No Offline Friends</Text>
-                <Text style={styles.emptyStateSubText}>Add names for local games.</Text>
-              </View>
-            ) : (
-              <View style={styles.listContainer}>
-                {offlineFriends.map((friend: any, index: number) => (
-                  <View key={friend.id}>
-                    {editingOfflineFriendID === friend.id ? (
-                      <View style={[styles.addFriendRow, { marginVertical: 8, marginBottom: 8 }]}>
-                        <TextInput 
-                          style={styles.inputField}
-                          placeholder="Friend name"
-                          placeholderTextColor="rgba(255,255,255,0.4)"
-                          autoCapitalize="words"
-                          value={editingOfflineFriendName}
-                          onChangeText={setEditingOfflineFriendName}
-                        />
-                        <TouchableOpacity style={[styles.secondaryActionButton, { width: 68 }]} onPress={handleSaveEditOfflineFriend}>
-                          <Text style={styles.secondaryActionButtonText}>Save</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
-                      <View style={styles.friendRow}>
-                        {compactAvatar(friend.name, false, 26)}
-                        <Text style={styles.friendName} numberOfLines={1}>{friend.name}</Text>
-                        {index === 0 && (
-                          <View style={styles.meBadge}>
-                            <Text style={styles.meBadgeText}>me</Text>
-                          </View>
-                        )}
-                        
-
-                        
-                        <View style={{ flex: 1 }} />
-                        
-                        {index > 0 && (
-                          <View style={styles.friendActions}>
-                            <TouchableOpacity onPress={() => {
-                              setEditingOfflineFriendID(friend.id);
-                              setEditingOfflineFriendName(friend.name);
-                            }}>
-                              <Text style={styles.editButtonText}>Edit</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity 
-                              style={styles.deleteButton}
-                              onPress={() => handleRemoveOfflineFriend(friend.id)}
-                            >
-                              <IconSymbol name="trash" size={14} color="rgba(255, 69, 58, 0.8)" />
-                            </TouchableOpacity>
-                          </View>
-                        )}
-                      </View>
-                    )}
-                    {index < offlineFriends.length - 1 && <View style={styles.divider} />}
-                  </View>
-                ))}
-              </View>
-            )}
+            <View style={styles.heroTextContainer}>
+              <Text style={styles.heroTitle}>Join with Code</Text>
+              <Text style={styles.heroSubtitle}>Enter a room code</Text>
+            </View>
+            <View style={styles.heroButton}>
+              <IconSymbol name="arrow.right" size={14} color="white" />
+            </View>
           </SurfaceBlur>
+        </TouchableOpacity>
+
+        {/* Segmented tab bar */}
+        <View style={styles.segmentBar}>
+          {tabs.map((t) => {
+            const active = activeTab === t.key;
+            return (
+              <TouchableOpacity
+                key={t.key}
+                style={[styles.segment, active && styles.segmentActive]}
+                onPress={() => setActiveTab(t.key)}
+                activeOpacity={0.85}
+              >
+                <IconSymbol name={t.icon} size={14} color={active ? 'white' : 'rgba(255,255,255,0.55)'} />
+                <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{t.label}</Text>
+                {typeof t.count === 'number' && t.count > 0 && (
+                  <View style={[styles.segmentCount, active && styles.segmentCountActive]}>
+                    <Text style={[styles.segmentCountText, active && styles.segmentCountTextActive]}>{t.count}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        {/* Online Friends Section */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Online Friends</Text>
-          <Text style={styles.sectionSubtitle}>For Multi Device games and invites.</Text>
-          
-          <SurfaceBlur style={styles.surfaceCard}>
-            <TextInput 
-              style={[styles.inputField, { marginBottom: 8 }]}
-              placeholder="Search username, email, or ID"
-              placeholderTextColor="rgba(255,255,255,0.4)"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={searchText}
-              onChangeText={(text) => {
-                setSearchText(text);
-                if (currentUserId && text.trim().length > 1) {
-                  searchFriends(text.trim(), currentUserId);
-                }
-              }}
-              returnKeyType="search"
-            />
-            
-            {searchText.trim().length > 0 && (
-              <View style={styles.searchResultsSection}>
-                <Text style={styles.subHeadingText}>Results</Text>
-                {!currentUserId ? (
-                  <TouchableOpacity onPress={() => router.push('/auth')}>
-                    <Text style={[styles.noMatchesText, { color: Colors.blue }]}>Log in to search friends</Text>
-                  </TouchableOpacity>
-                ) : isSearching ? (
-                  <Text style={styles.noMatchesText}>Searching...</Text>
-                ) : searchResults.length === 0 ? (
-                  <Text style={styles.noMatchesText}>No users found</Text>
-                ) : (
-                  searchResults.map((result) => (
-                    <View key={result.id} style={[styles.friendRow, { paddingVertical: 6 }]}>
-                      {compactAvatar(result.username, false, 26)}
-                      <Text style={styles.friendName} numberOfLines={1}>{result.username}</Text>
-                      <View style={{ flex: 1 }} />
-                      {result.relationshipState === 'friends' ? (
-                        <Text style={{ color: Colors.green, fontSize: 11, fontWeight: '600' }}>Friends ✓</Text>
-                      ) : result.relationshipState === 'pendingOutgoing' ? (
-                        <Text style={{ color: Colors.orange, fontSize: 11, fontWeight: '600' }}>Pending</Text>
-                      ) : result.relationshipState === 'pendingIncoming' ? (
-                        <TouchableOpacity 
-                          style={[styles.invitePillButton, { backgroundColor: Colors.green }]}
-                          onPress={() => {
-                            const req = requests.find(r => r.fromUserId === result.id);
-                            if (req && currentUserId) acceptRequest(req.id, currentUserId);
-                          }}
-                        >
-                          <Text style={styles.invitePillButtonText}>Accept</Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <TouchableOpacity 
-                          style={styles.invitePillButton}
-                          onPress={() => currentUserId && sendFriendRequest(currentUserId, result.id)}
-                        >
-                          <Text style={styles.invitePillButtonText}>Add</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  ))
-                )}
-              </View>
-            )}
-
-            {/* Friend Requests */}
-            {requests.length > 0 && (
-              <View style={[styles.searchResultsSection, { marginTop: 8 }]}>
-                <Text style={styles.subHeadingText}>Friend Requests ({requests.length})</Text>
-                {requests.map((req) => (
-                  <View key={req.id} style={[styles.friendRow, { paddingVertical: 6 }]}>
-                    {compactAvatar(req.fromUsername, false, 26)}
-                    <Text style={styles.friendName} numberOfLines={1}>{req.fromUsername}</Text>
-                    <View style={{ flex: 1 }} />
-                    <TouchableOpacity 
-                      style={[styles.invitePillButton, { backgroundColor: Colors.green, marginRight: 6 }]}
-                      onPress={() => currentUserId && acceptRequest(req.id, currentUserId)}
-                    >
-                      <Text style={styles.invitePillButtonText}>Accept</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[styles.invitePillButton, { backgroundColor: 'rgba(255,59,48,0.2)' }]}
-                      onPress={() => declineRequest(req.id)}
-                    >
-                      <Text style={[styles.invitePillButtonText, { color: Colors.red }]}>Decline</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {onlineFriends.length === 0 ? (
-              <View style={styles.onlineEmptyContainer}>
-                <View style={styles.onlineEmptyHeader}>
-                  <IconSymbol name="person.2.fill" size={22} color="rgba(255,255,255,0.5)" />
-                  <View style={{ gap: 2 }}>
-                    <Text style={styles.emptyStateTitleText}>No Online Friends</Text>
-                    <Text style={styles.emptyStateSubText}>Accepted friendships appear here.</Text>
-                  </View>
-                </View>
-                <TouchableOpacity style={styles.inviteButtonFull} onPress={handleShareInvite}>
-                  <IconSymbol name="square.and.arrow.up" size={14} color="white" />
-                  <Text style={styles.inviteButtonFullText}>Invite friends to play</Text>
+        {/* ── OFFLINE TAB ── */}
+        {activeTab === 'offline' && (
+          <View style={styles.tabContent}>
+            <SurfaceBlur style={styles.surfaceCard}>
+              <View style={styles.addFriendRow}>
+                <TextInput 
+                  style={styles.inputField}
+                  placeholder="Add a name"
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  autoCapitalize="words"
+                  value={draftFriendName}
+                  onChangeText={setDraftFriendName}
+                  onSubmitEditing={handleAddOfflineFriend}
+                  returnKeyType="done"
+                />
+                <TouchableOpacity style={styles.addBtn} onPress={handleAddOfflineFriend}>
+                  <IconSymbol name="plus" size={18} color="white" />
                 </TouchableOpacity>
               </View>
-            ) : (
-              <View style={styles.listContainer}>
-                {onlineFriends.map((friend: any, index: number) => (
-                  <View key={friend.id}>
+
+              {offlineFriends.length === 0 ? (
+                <View style={styles.emptyStateContainer}>
+                  <IconSymbol name="person.crop.circle.badge.plus" size={28} color="rgba(255,255,255,0.35)" />
+                  <Text style={styles.emptyStateText}>No names yet</Text>
+                </View>
+              ) : (
+                <View style={styles.listContainer}>
+                  {offlineFriends.map((friend: any, index: number) => (
+                    <View key={friend.id}>
+                      {editingOfflineFriendID === friend.id ? (
+                        <View style={styles.addFriendRow}>
+                          <TextInput 
+                            style={styles.inputField}
+                            placeholderTextColor="rgba(255,255,255,0.4)"
+                            autoCapitalize="words"
+                            value={editingOfflineFriendName}
+                            onChangeText={setEditingOfflineFriendName}
+                            autoFocus
+                          />
+                          <TouchableOpacity style={[styles.addBtn, { backgroundColor: Colors.green }]} onPress={handleSaveEditOfflineFriend}>
+                            <IconSymbol name="checkmark" size={16} color="white" />
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <View style={styles.friendRow}>
+                          <Avatar title={friend.name} size={30} />
+                          <Text style={styles.friendName} numberOfLines={1}>{friend.name}</Text>
+                          {index === 0 && (
+                            <View style={styles.meBadge}>
+                              <Text style={styles.meBadgeText}>me</Text>
+                            </View>
+                          )}
+                          <View style={{ flex: 1 }} />
+                          {index > 0 && (
+                            <View style={styles.friendActions}>
+                              <TouchableOpacity 
+                                style={styles.iconBtn}
+                                onPress={() => {
+                                  setEditingOfflineFriendID(friend.id);
+                                  setEditingOfflineFriendName(friend.name);
+                                }}
+                              >
+                                <IconSymbol name="pencil" size={13} color="rgba(255,255,255,0.7)" />
+                              </TouchableOpacity>
+                              <TouchableOpacity 
+                                style={styles.iconBtn}
+                                onPress={() => removeOfflineFriend(friend.id)}
+                              >
+                                <IconSymbol name="trash" size={13} color="rgba(255, 69, 58, 0.85)" />
+                              </TouchableOpacity>
+                            </View>
+                          )}
+                        </View>
+                      )}
+                      {index < offlineFriends.length - 1 && <View style={styles.divider} />}
+                    </View>
+                  ))}
+                </View>
+              )}
+            </SurfaceBlur>
+          </View>
+        )}
+
+        {/* ── ONLINE TAB ── */}
+        {activeTab === 'online' && (
+          <View style={styles.tabContent}>
+            {/* Search card */}
+            <SurfaceBlur style={styles.surfaceCard}>
+              <View style={styles.searchRow}>
+                <IconSymbol name="magnifyingglass" size={15} color="rgba(255,255,255,0.5)" />
+                <TextInput 
+                  style={styles.searchInput}
+                  placeholder="Search by username or email"
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  value={searchText}
+                  onChangeText={(text) => {
+                    setSearchText(text);
+                    if (currentUserId && text.trim().length > 1) {
+                      searchFriends(text.trim(), currentUserId);
+                    }
+                  }}
+                  returnKeyType="search"
+                />
+                {searchText.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchText('')}>
+                    <IconSymbol name="xmark.circle.fill" size={16} color="rgba(255,255,255,0.4)" />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {searchText.trim().length > 0 && (
+                <View style={styles.searchResultsSection}>
+                  {!currentUserId ? (
+                    <TouchableOpacity onPress={() => router.push('/auth')}>
+                      <Text style={[styles.noMatchesText, { color: Colors.blue }]}>Log in to search</Text>
+                    </TouchableOpacity>
+                  ) : isSearching ? (
+                    <Text style={styles.noMatchesText}>Searching…</Text>
+                  ) : searchResults.length === 0 ? (
+                    <Text style={styles.noMatchesText}>No users found</Text>
+                  ) : (
+                    searchResults.map((result) => (
+                      <View key={result.id} style={styles.friendRow}>
+                        <Avatar title={result.username} size={28} />
+                        <Text style={styles.friendName} numberOfLines={1}>{result.username}</Text>
+                        <View style={{ flex: 1 }} />
+                        {result.relationshipState === 'friends' ? (
+                          <Text style={[styles.statusTag, { color: Colors.green }]}>Friends</Text>
+                        ) : result.relationshipState === 'pendingOutgoing' ? (
+                          <Text style={[styles.statusTag, { color: Colors.orange }]}>Pending</Text>
+                        ) : result.relationshipState === 'pendingIncoming' ? (
+                          <TouchableOpacity 
+                            style={[styles.invitePillButton, { backgroundColor: Colors.green }]}
+                            onPress={() => {
+                              const req = requests.find(r => r.fromUserId === result.id);
+                              if (req && currentUserId) acceptRequest(req.id, currentUserId);
+                            }}
+                          >
+                            <Text style={styles.invitePillButtonText}>Accept</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <TouchableOpacity 
+                            style={styles.invitePillButton}
+                            onPress={() => currentUserId && sendFriendRequest(currentUserId, result.id)}
+                          >
+                            <Text style={styles.invitePillButtonText}>Add</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    ))
+                  )}
+                </View>
+              )}
+            </SurfaceBlur>
+
+            {/* Friend Requests card */}
+            {requests.length > 0 && (
+              <SurfaceBlur style={[styles.surfaceCard, { marginTop: 12 }]}>
+                <View style={styles.cardHeaderRow}>
+                  <IconSymbol name="bell.badge.fill" size={14} color={Colors.orange} />
+                  <Text style={styles.cardHeaderText}>Requests · {requests.length}</Text>
+                </View>
+                {requests.map((req, idx) => (
+                  <View key={req.id}>
                     <View style={styles.friendRow}>
-                      {compactAvatar(friend.name, friend.isOnline, 26)}
-                      <Text style={styles.friendName} numberOfLines={1}>{friend.name}</Text>
+                      <Avatar title={req.fromUsername} size={30} />
+                      <Text style={styles.friendName} numberOfLines={1}>{req.fromUsername}</Text>
                       <View style={{ flex: 1 }} />
-                      <TouchableOpacity style={styles.invitePillButton}>
-                        <Text style={styles.invitePillButtonText}>Invite</Text>
+                      <TouchableOpacity 
+                        style={[styles.invitePillButton, { backgroundColor: Colors.green, marginRight: 6 }]}
+                        onPress={() => currentUserId && acceptRequest(req.id, currentUserId)}
+                      >
+                        <Text style={styles.invitePillButtonText}>Accept</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[styles.invitePillButton, { backgroundColor: 'rgba(255,59,48,0.18)' }]}
+                        onPress={() => declineRequest(req.id)}
+                      >
+                        <Text style={[styles.invitePillButtonText, { color: Colors.red }]}>Decline</Text>
                       </TouchableOpacity>
                     </View>
-                    {index < onlineFriends.length - 1 && <View style={styles.divider} />}
+                    {idx < requests.length - 1 && <View style={styles.divider} />}
                   </View>
                 ))}
-              </View>
+              </SurfaceBlur>
             )}
-          </SurfaceBlur>
-        </View>
 
-        {/* Public Rooms Section */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.publicRoomsHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.publicRoomsTitle}>Public Rooms</Text>
-              <Text style={styles.publicRoomsSubtitle}>Open multiplayer rooms you can join.</Text>
-            </View>
-            <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/auth')}>
-              <IconSymbol name="person.crop.circle" size={12} color={Colors.blue} />
-              <Text style={styles.loginButtonText}>Login</Text>
-            </TouchableOpacity>
+            {/* Friends list card */}
+            <SurfaceBlur style={[styles.surfaceCard, { marginTop: 12 }]}>
+              <View style={styles.cardHeaderRow}>
+                <IconSymbol name="person.2.fill" size={14} color="rgba(255,255,255,0.7)" />
+                <Text style={styles.cardHeaderText}>My Friends · {onlineFriends.length}</Text>
+                <View style={{ flex: 1 }} />
+                <TouchableOpacity onPress={handleShareInvite} style={styles.shareSmallBtn}>
+                  <IconSymbol name="square.and.arrow.up" size={12} color="white" />
+                  <Text style={styles.shareSmallBtnText}>Invite</Text>
+                </TouchableOpacity>
+              </View>
+
+              {onlineFriends.length === 0 ? (
+                <View style={styles.emptyStateContainer}>
+                  <IconSymbol name="person.2.fill" size={26} color="rgba(255,255,255,0.35)" />
+                  <Text style={styles.emptyStateText}>No friends yet</Text>
+                </View>
+              ) : (
+                <View style={styles.listContainer}>
+                  {onlineFriends.map((friend: any, index: number) => (
+                    <View key={friend.id}>
+                      <View style={styles.friendRow}>
+                        <Avatar title={friend.name} isOnline={friend.isOnline} size={30} />
+                        <Text style={styles.friendName} numberOfLines={1}>{friend.name}</Text>
+                        <View style={{ flex: 1 }} />
+                        <TouchableOpacity style={styles.invitePillButton}>
+                          <Text style={styles.invitePillButtonText}>Invite</Text>
+                        </TouchableOpacity>
+                      </View>
+                      {index < onlineFriends.length - 1 && <View style={styles.divider} />}
+                    </View>
+                  ))}
+                </View>
+              )}
+            </SurfaceBlur>
           </View>
+        )}
 
-          <SurfaceBlur style={styles.surfaceCard}>
-            <View style={[styles.emptyStateContainer, { paddingVertical: 16 }]}>
-              <IconSymbol name="person.3.sequence.fill" size={28} color="rgba(10, 132, 255, 0.6)" />
-              <Text style={[styles.emptyStateText, { color: 'rgba(255,255,255,0.6)' }]}>No public rooms yet</Text>
-              <Text style={styles.emptyStateSubText}>Create a room from any multiplayer game.</Text>
-            </View>
-          </SurfaceBlur>
-        </View>
+        {/* ── ROOMS TAB ── */}
+        {activeTab === 'rooms' && (
+          <View style={styles.tabContent}>
+            {!currentUserId && (
+              <TouchableOpacity 
+                style={styles.loginCard}
+                onPress={() => router.push('/auth')}
+                activeOpacity={0.85}
+              >
+                <View style={styles.loginIconWrap}>
+                  <IconSymbol name="person.crop.circle" size={18} color={Colors.blue} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.loginTitle}>Sign in</Text>
+                  <Text style={styles.loginSub}>Required to join public rooms</Text>
+                </View>
+                <IconSymbol name="arrow.right" size={14} color={Colors.blue} />
+              </TouchableOpacity>
+            )}
+
+            <SurfaceBlur style={styles.surfaceCard}>
+              <View style={styles.cardHeaderRow}>
+                <IconSymbol name="person.3.sequence.fill" size={14} color={Colors.blue} />
+                <Text style={styles.cardHeaderText}>Public Rooms</Text>
+              </View>
+              <View style={styles.emptyStateContainer}>
+                <IconSymbol name="person.3.sequence.fill" size={28} color="rgba(10, 132, 255, 0.6)" />
+                <Text style={styles.emptyStateText}>No rooms yet</Text>
+                <Text style={styles.emptyStateSubText}>Create one from any multiplayer game</Text>
+              </View>
+            </SurfaceBlur>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -391,25 +447,27 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
     gap: 10,
   },
   title: {
     fontFamily: 'Viral-Black',
-    fontSize: 25,
+    fontSize: 28,
     color: 'white',
   },
   notificationBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(255, 149, 0, 0.14)',
+    backgroundColor: 'rgba(255, 149, 0, 0.16)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 149, 0, 0.3)',
   },
   notificationText: {
-    color: 'orange',
+    color: Colors.orange,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -419,73 +477,116 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  quickJoinCard: {
+
+  // Hero
+  heroCard: {
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 18,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(10, 132, 255, 0.25)',
     marginBottom: 14,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: Colors.blue,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
     elevation: 6,
   },
-  quickJoinIconContainer: {
-    width: 40,
-    height: 40,
+  heroIcon: {
+    width: 38,
+    height: 38,
     borderRadius: 12,
-    backgroundColor: 'rgba(10, 132, 255, 0.14)',
+    backgroundColor: 'rgba(10, 132, 255, 0.18)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  quickJoinTextContainer: {
+  heroTextContainer: {
     flex: 1,
     gap: 2,
   },
-  quickJoinTitle: {
+  heroTitle: {
     color: 'white',
     fontSize: 15,
     fontWeight: 'bold',
   },
-  quickJoinSubtitle: {
-    color: 'rgba(255,255,255,0.6)',
+  heroSubtitle: {
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 11,
   },
-  quickJoinButton: {
+  heroButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: Colors.blue,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  quickJoinButtonText: {
+
+  // Segmented tabs
+  segmentBar: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  segment: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 11,
+  },
+  segmentActive: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  segmentText: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  segmentTextActive: {
     color: 'white',
-    fontSize: 12,
     fontWeight: 'bold',
   },
-  sectionContainer: {
-    marginBottom: 14,
+  segmentCount: {
+    minWidth: 18,
+    paddingHorizontal: 5,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  sectionTitle: {
-    fontFamily: 'Viral-Black',
-    color: 'white',
-    fontSize: 16,
-    marginBottom: 2,
+  segmentCountActive: {
+    backgroundColor: Colors.blue,
   },
-  sectionSubtitle: {
+  segmentCountText: {
     color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    marginBottom: 6,
+    fontSize: 10,
+    fontWeight: 'bold',
   },
+  segmentCountTextActive: {
+    color: 'white',
+  },
+
+  tabContent: {
+    gap: 0,
+  },
+
+  // Cards
   surfaceCard: {
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.06)',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -493,82 +594,107 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 6,
   },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+  },
+  cardHeaderText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    fontWeight: 'bold',
+    letterSpacing: 0.3,
+  },
+
   addFriendRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   inputField: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 11,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     color: 'white',
-    fontSize: 15,
+    fontSize: 14,
   },
-  secondaryActionButton: {
-    width: 64,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 10,
+  addBtn: {
+    width: 44,
+    height: 44,
+    backgroundColor: Colors.blue,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  secondaryActionButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 15,
+
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 11,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
+  searchInput: {
+    flex: 1,
+    color: 'white',
+    fontSize: 14,
+    paddingVertical: 4,
+  },
+
+  searchResultsSection: {
+    marginTop: 10,
+  },
+
   listContainer: {
     flexDirection: 'column',
   },
   friendRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
-    gap: 8,
+    paddingVertical: 6,
+    gap: 10,
   },
   friendName: {
     color: 'white',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
   },
   meBadge: {
     backgroundColor: 'rgba(10, 132, 255, 0.18)',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 12,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 10,
   },
   meBadgeText: {
     color: Colors.blue,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
   },
   friendActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
-  editButtonText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  deleteButton: {
-    width: 24,
-    height: 24,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+  iconBtn: {
+    width: 28,
+    height: 28,
+    backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    marginVertical: 4,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    marginVertical: 2,
   },
   avatarContainer: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 100,
     justifyContent: 'center',
     alignItems: 'center',
@@ -586,54 +712,27 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(0,0,0,0.7)',
   },
+
   emptyStateContainer: {
     alignItems: 'center',
-    paddingVertical: 24,
-    gap: 10,
-  },
-  emptyStateTitleText: {
-    color: 'white',
-    fontSize: 13,
-    fontWeight: 'bold',
+    paddingVertical: 22,
+    gap: 6,
   },
   emptyStateText: {
-    color: 'white',
-    fontSize: 15,
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 13,
     fontWeight: '600',
   },
   emptyStateSubText: {
     color: 'rgba(255,255,255,0.4)',
-    fontSize: 12,
+    fontSize: 11,
     textAlign: 'center',
   },
-  onlineEmptyContainer: {
-    gap: 8,
-    paddingVertical: 4,
-  },
-  onlineEmptyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  inviteButtonFull: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: Colors.blue,
-    borderRadius: 10,
-    paddingVertical: 8,
-    marginTop: 4,
-  },
-  inviteButtonFullText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
+
   invitePillButton: {
     backgroundColor: Colors.blue,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 20,
   },
   invitePillButtonText: {
@@ -641,49 +740,57 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: 'bold',
   },
-  searchResultsSection: {
-    marginBottom: 6,
-  },
-  subHeadingText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
+  statusTag: {
+    fontSize: 11,
+    fontWeight: 'bold',
   },
   noMatchesText: {
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 12,
     paddingVertical: 4,
   },
-  publicRoomsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  publicRoomsTitle: {
-    fontFamily: 'Viral-Black',
-    color: 'white',
-    fontSize: 16,
-    marginBottom: 2,
-  },
-  publicRoomsSubtitle: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-  },
-  loginButton: {
+
+  shareSmallBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: 'rgba(10, 132, 255, 0.12)',
-    borderRadius: 20,
+    backgroundColor: Colors.blue,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+  },
+  shareSmallBtnText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+
+  loginCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(10, 132, 255, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(10, 132, 255, 0.25)',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
   },
-  loginButtonText: {
-    color: Colors.blue,
-    fontSize: 12,
+  loginIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(10, 132, 255, 0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loginTitle: {
+    color: 'white',
+    fontSize: 14,
     fontWeight: 'bold',
+  },
+  loginSub: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 11,
   },
 });
