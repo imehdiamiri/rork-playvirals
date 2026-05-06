@@ -38,12 +38,12 @@ function TabIndicator({ focused }: { focused: boolean }) {
   }));
 
   return (
-    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }, aStyle]}>
+    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 999 }, aStyle]}>
       <View
         style={[
           StyleSheet.absoluteFillObject,
           {
-            borderRadius: 18,
+            borderRadius: 999,
             backgroundColor: 'rgba(255,255,255,0.10)',
             borderWidth: StyleSheet.hairlineWidth,
             borderColor: 'rgba(255,255,255,0.22)',
@@ -171,8 +171,8 @@ const styles = StyleSheet.create({
   pill: {
     minWidth: 64,
     height: 56,
-    paddingHorizontal: 10,
-    borderRadius: 18,
+    paddingHorizontal: 14,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 0,

@@ -228,10 +228,12 @@ export function CardsDeckRenderer({ categoryId }: Props) {
         );
       }
 
-      // Stacked cards behind — alternating tilt to feel like a deck
-      const scale = 1 - 0.05 * offset;
-      const top = -10 * offset;
-      const tilt = offset % 2 === 0 ? -2 * offset : 2 * offset;
+      // Stacked cards behind — peek from left & right so swipe affordance is obvious
+      const scale = 1 - 0.04 * offset;
+      const sideShift = 22 * offset; // horizontal peek
+      const direction = offset % 2 === 0 ? 1 : -1; // alternate sides
+      const tilt = direction * (4 + offset * 1.5);
+      const top = 6 * offset;
       return (
         <View
           key={card.id}
@@ -239,9 +241,13 @@ export function CardsDeckRenderer({ categoryId }: Props) {
             styles.cardStyle,
             {
               top,
-              transform: [{ scale }, { rotate: `${tilt}deg` }],
+              transform: [
+                { translateX: direction * sideShift },
+                { scale },
+                { rotate: `${tilt}deg` },
+              ],
               zIndex: 50 - offset,
-              opacity: 1 - 0.18 * offset,
+              opacity: 1 - 0.12 * offset,
             },
           ]}
           pointerEvents="none"
@@ -315,8 +321,9 @@ function CardFace({ card, category }: { card: PartyCard, category: any }) {
         <Text style={styles.cardText}>{card.text}</Text>
       </View>
       <View style={styles.cardFooter}>
-        <IconSymbol name="hand.draw" size={14} color="rgba(0,0,0,0.25)" />
-        <Text style={styles.cardFooterText}>swipe to flip</Text>
+        <IconSymbol name="chevron.left" size={12} color="rgba(0,0,0,0.3)" />
+        <Text style={styles.cardFooterText}>swipe left or right</Text>
+        <IconSymbol name="chevron.right" size={12} color="rgba(0,0,0,0.3)" />
       </View>
       <IconSymbol name={category.icon as any} size={140} color={category.accentColor + '0E'} style={styles.watermark} />
     </View>
