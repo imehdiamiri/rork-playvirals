@@ -42,7 +42,7 @@ type PageIndex = 0 | 1 | 2 | 3;
 
 const ART = {
   bored: 'https://r2-pub.rork.com/generated-images/020c5154-1e27-47e9-87ab-c7ffcb75230d.png',
-  party: 'https://r2-pub.rork.com/generated-images/fec29f95-8f3b-40cf-ac76-8cdfe1695d74.png',
+  party: 'https://r2-pub.rork.com/generated-images/61536ff7-b405-469d-8ab8-3e9e5f38d81a.png',
   pass: 'https://r2-pub.rork.com/generated-images/7ff867e4-3755-42b0-a99b-386494b64e99.png',
   hero: 'https://r2-pub.rork.com/generated-images/ec6d76b0-e20d-4a63-8ace-1e1379180c90.png',
 } as const;
@@ -242,30 +242,43 @@ export default function OnboardingScreen() {
               <FloatingArt active={currentPage === 1} source={ART.party} glowColor="rgba(48, 209, 88, 0.45)" />
             </OnboardPage>
 
-            <OnboardPage
-              active={currentPage === 2}
-              eyebrow="PLAYER #1"
-              title="What's your name?"
-              subtitle="So we can call you out by name during the chaos."
-              compact={keyboardVisible}
-            >
-              <FloatingArt active={currentPage === 2} source={ART.pass} glowColor="rgba(10, 132, 255, 0.5)" compact={keyboardVisible} />
-              <View style={styles.inputShell}>
-                <TextInput
-                  ref={inputRef}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="e.g. Alex"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  style={styles.input}
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  returnKeyType="done"
-                  onSubmitEditing={Keyboard.dismiss}
-                  maxLength={16}
-                />
-              </View>
-            </OnboardPage>
+            <View style={styles.page}>
+              <EnterStage active={currentPage === 2} delay={60}>
+                <View style={styles.idCard}>
+                  <View style={styles.idCardHeader}>
+                    <Text style={styles.idCardBrand}>PLAYVIRALS</Text>
+                    <View style={styles.idCardChip} />
+                  </View>
+                  <Text style={styles.idCardLabel}>PLAYER ID</Text>
+                  <View style={styles.idCardInputWrap}>
+                    <TextInput
+                      ref={inputRef}
+                      value={name}
+                      onChangeText={setName}
+                      placeholder="YOUR NAME"
+                      placeholderTextColor="rgba(255,255,255,0.28)"
+                      style={styles.idCardInput}
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      returnKeyType="done"
+                      onSubmitEditing={Keyboard.dismiss}
+                      maxLength={16}
+                    />
+                    <View style={styles.idCardUnderline} />
+                  </View>
+                  <View style={styles.idCardFooter}>
+                    <Text style={styles.idCardFooterText}>OFFICIAL PARTY MEMBER</Text>
+                    <Text style={styles.idCardFooterText}>#001</Text>
+                  </View>
+                </View>
+              </EnterStage>
+              <EnterStage active={currentPage === 2} delay={180}>
+                <View style={[styles.copyCard, { marginTop: 24 }]}>
+                  <Text style={styles.eyebrow}>PLAYER #1</Text>
+                  {!keyboardVisible && <Text style={styles.subtitle}>Tap to fill out your party ID.</Text>}
+                </View>
+              </EnterStage>
+            </View>
 
             <OnboardPage
               active={currentPage === 3}
@@ -320,8 +333,9 @@ function OnboardPage({ active, eyebrow, title, subtitle, children, compact }: { 
   );
 }
 
-const ART_SIZE = Math.min(SCREEN_WIDTH - 140, 240);
-const ART_SIZE_COMPACT = 120;
+const ART_SIZE = Math.min(SCREEN_WIDTH - 48, 360);
+const ART_SIZE_COMPACT = 140;
+const ID_CARD_WIDTH = Math.min(SCREEN_WIDTH - 40, 360);
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.black },
@@ -357,6 +371,38 @@ const styles = StyleSheet.create({
   subtitle: { color: 'rgba(255,255,255,0.62)', fontSize: 14, lineHeight: 20, textAlign: 'center', fontWeight: '600', paddingHorizontal: 14 },
   inputShell: { marginTop: 18, width: SCREEN_WIDTH - 72, height: 60, borderRadius: 22, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
   input: { flex: 1, textAlign: 'center', color: '#fff', fontFamily: 'Viral-Black', fontSize: 22, paddingHorizontal: 20 },
+  idCard: {
+    width: ID_CARD_WIDTH,
+    alignSelf: 'center',
+    borderRadius: 28,
+    paddingHorizontal: 22,
+    paddingTop: 18,
+    paddingBottom: 18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.22)',
+    overflow: 'hidden',
+    shadowColor: '#0A84FF',
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 12,
+  },
+  idCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
+  idCardBrand: { fontFamily: 'Viral-Black', color: '#FFD60A', fontSize: 14, letterSpacing: 2 },
+  idCardChip: { width: 32, height: 24, borderRadius: 6, backgroundColor: '#FFD60A', opacity: 0.9 },
+  idCardLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 11, letterSpacing: 2, fontFamily: 'Viral-Black', marginBottom: 6 },
+  idCardInputWrap: { marginBottom: 14 },
+  idCardInput: {
+    color: '#fff',
+    fontFamily: 'Viral-Black',
+    fontSize: 30,
+    paddingVertical: Platform.OS === 'ios' ? 10 : 4,
+    letterSpacing: 1,
+  },
+  idCardUnderline: { height: 2, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 2 },
+  idCardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
+  idCardFooterText: { color: 'rgba(255,255,255,0.4)', fontSize: 9, letterSpacing: 1.5, fontFamily: 'Viral-Black' },
   bottomControls: { position: 'absolute', left: 24, right: 24, bottom: 0, gap: 10 },
   indicators: { flexDirection: 'row', justifyContent: 'center', gap: 8, height: 10, alignItems: 'center' },
   indicator: { height: 8, borderRadius: 999, backgroundColor: '#fff' },
