@@ -21,6 +21,7 @@ import { Colors } from '@/src/theme/Colors';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { useGameStore } from '@/src/store/useGameStore';
 import { usePaywallStore } from '@/src/store/usePaywallStore';
+import { useEconomyStore } from '@/src/store/useEconomyStore';
 import { useSettingsStore } from '@/src/store/useSettingsStore';
 import { AppConstants } from '@/src/constants/AppConstants';
 
@@ -51,7 +52,8 @@ export default function ProfileScreen() {
   const safeBack = () => { if (router.canGoBack()) { router.back(); } else { router.replace('/'); } };
   const isGuest = authAccount?.provider === 'guest';
   const { activeSession, exitActiveSession } = useGameStore();
-  const { stars, isPremium, restorePurchases } = usePaywallStore();
+  const { restorePurchases } = usePaywallStore();
+  const { starsBalance: stars, isPremium } = useEconomyStore();
   const { isSoundEnabled, setSoundEnabled, isVibrationEnabled, setVibrationEnabled } = useSettingsStore();
 
   const [username, setUsername] = useState(authAccount?.username || 'Guest');

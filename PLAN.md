@@ -20,8 +20,19 @@
 ## Validation
 - [x] runChecks passes
 
+## Phase 4 — Economy / Paywall Unification
+- [x] Single source of truth: `useEconomyStore` listens live to `users/$uid` (wallet + isPremium + isLifetime). Client never writes — RTDB rules forbid it.
+- [x] All wallet mutations go through Cloud Functions: `claimDailyReward` (transactional, once-per-day) and `syncRevenueCat` (server fetches RC subscriber state, mirrors entitlement, idempotently credits star packs via `processedTransactions`).
+- [x] `usePaywallStore` reduced to a thin storefront: configures RC with the Firebase uid, listens for `customerInfoUpdate`, and after every configure/purchase/restore calls `syncEntitlement()` which invokes `syncRevenueCat`.
+- [x] Removed split-brain `isPremium`/`stars` from paywall store. Profile, paywall and game-detail all read entitlement from `useEconomyStore`.
+- [x] `aiCardCost(isPremium)` helper exported from `useEconomyStore` and `AICardGenerator` (1★ premium / 5★ free).
+- [x] `_layout.tsx` bridges Firebase auth → `economy.attach` + `paywall.configure` on uid change; detaches on sign-out. Registered `paywall` as a modal screen.
+- [x] RTDB rules harden `users/$uid/{isLifetime,entitlementUpdatedAt,processedTransactions}` against client writes.
+
 ## Follow-ups (next sessions)
-- Phase 4 — economy/paywall unification (RC ↔ economy bridge, transactional wallet ops)
 - Phase 2 — admin website migration to Firebase Admin SDK
 - Phase 6 — multiplayer rebuild (Memory Grid, Guess the Seconds, Pass & Guess)
 - Phase 7–10 — perf, UI consolidation, team mode, production polish
+- Set RC server secret: `firebase functions:secrets:set REVENUECAT_SECRET`
+- Wire `purchase-detail.tsx` to a real package via route params (currently hardcoded yearly placeholder)
+- Replace hardcoded plan/star tiles in `profile.tsx` with live RC offerings

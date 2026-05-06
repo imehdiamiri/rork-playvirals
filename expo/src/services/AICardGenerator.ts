@@ -38,6 +38,11 @@ export async function bumpUsage(): Promise<void> {
 
 export const FREE_DAILY_LIMIT = 5;
 
+/** Cost in Stars to generate one AI card, based on entitlement. */
+export function aiCardCost(isPremium: boolean): number {
+  return isPremium ? 1 : 5;
+}
+
 export async function getRemainingGenerations(isPremium: boolean): Promise<number> {
   if (isPremium) return Infinity;
   const used = await getUsageToday();

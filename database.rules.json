@@ -9,7 +9,10 @@
           ".write": false,
           "balance": { ".validate": "newData.isNumber() && newData.val() >= 0" }
         },
-        "isPremium": { ".write": false }
+        "isPremium": { ".write": false },
+        "isLifetime": { ".write": false },
+        "entitlementUpdatedAt": { ".write": false },
+        "processedTransactions": { ".write": false }
       }
     },
 

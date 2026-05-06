@@ -16,6 +16,8 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { GlowView } from '@/src/components/ui/GlowView';
 import { AppBackgroundView } from '@/src/components/AppBackgroundView';
 import { usePaywallStore } from '@/src/store/usePaywallStore';
+import { useEconomyStore } from '@/src/store/useEconomyStore';
+import { useAuthStore } from '@/src/store/useAuthStore';
 import { PurchasesPackage } from 'react-native-purchases';
 import * as Linking from 'expo-linking';
 
@@ -33,9 +35,8 @@ export default function PaywallScreen() {
   const { 
     isLoading, 
     isPurchasing, 
-    isPremium, 
     error, 
-    initialize,
+    configure,
     purchasePackage,
     restorePurchases,
     clearError,
@@ -44,13 +45,15 @@ export default function PaywallScreen() {
     getStarPackages,
     getDonationPackages
   } = usePaywallStore();
+  const { isPremium } = useEconomyStore();
+  const uid = useAuthStore((s) => s.currentUser?.uid);
 
   const [tab, setTab] = useState<PaywallTab>(PaywallTab.Subscription);
   const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
 
   useEffect(() => {
-    initialize();
-  }, []);
+    if (uid) configure(uid);
+  }, [uid, configure]);
 
   useEffect(() => {
     if (error) {

@@ -15,6 +15,8 @@ import {
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { useSettingsStore } from '@/src/store/useSettingsStore';
+import { useEconomyStore } from '@/src/store/useEconomyStore';
+import { usePaywallStore } from '@/src/store/usePaywallStore';
 import { useAudioPreload } from '@/src/hooks/useAudioPreload';
 import { ToastOverlay } from '@/src/components/ToastOverlay';
 import { DeviceIdentity } from '@/src/utils/DeviceIdentity';
@@ -55,6 +57,18 @@ export default function RootLayout() {
     initialize();
     DeviceIdentity.init(); // warm device ID cache
   }, [initialize]);
+
+  // Bridge Firebase auth → economy listener + RevenueCat configure.
+  // Both stores key off the current uid; detach when signing out.
+  useEffect(() => {
+    const uid = currentUser?.uid;
+    if (!uid) {
+      useEconomyStore.getState().detach();
+      return;
+    }
+    useEconomyStore.getState().attach(uid);
+    usePaywallStore.getState().configure(uid);
+  }, [currentUser?.uid]);
 
   // Track app foreground/background for presence
   useEffect(() => {
@@ -117,6 +131,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tools)" options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
         <Stack.Screen name="purchase-detail" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="paywall" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="team-setup" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
