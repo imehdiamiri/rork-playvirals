@@ -163,16 +163,15 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   headerSubtitle: {
-    fontFamily: 'Viral-Black',
     fontSize: 11,
+    fontWeight: '900',
     letterSpacing: 2,
     color: 'rgba(255,255,255,0.45)',
   },
   headerTitle: {
     fontFamily: 'Viral-Black',
-    fontSize: 26,
+    fontSize: 20,
     color: 'white',
-    letterSpacing: -0.3,
   },
   bookmarkButton: {
     width: 40,
@@ -198,16 +197,15 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   sectionSubtitle: {
-    fontFamily: 'Viral-Black',
     fontSize: 11,
+    fontWeight: '900',
     letterSpacing: 2,
     color: 'rgba(255,255,255,0.45)',
   },
   sectionTitle: {
     fontFamily: 'Viral-Black',
-    fontSize: 18,
+    fontSize: 20,
     color: 'white',
-    letterSpacing: -0.2,
   },
   sectionTrailing: {
     flexDirection: 'column',
@@ -221,8 +219,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   totalBadgeText: {
-    fontFamily: 'Viral-Black',
     fontSize: 11,
+    fontWeight: '900',
     color: 'rgba(255,255,255,0.55)',
   },
   cardsList: {
@@ -281,8 +279,8 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   categorySubtitle: {
-    fontFamily: 'Fredoka_500Medium',
     fontSize: 13,
+    fontWeight: '600',
     color: 'rgba(255,255,255,0.5)',
   },
 });

@@ -396,9 +396,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'Viral-Black',
-    fontSize: 26,
+    fontSize: 20,
     color: 'white',
-    letterSpacing: -0.3,
   },
   notificationBadge: {
     flexDirection: 'row',
@@ -449,14 +448,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   quickJoinTitle: {
-    fontFamily: 'Viral-Black',
     color: 'white',
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: 'bold',
   },
   quickJoinSubtitle: {
-    fontFamily: 'Fredoka_500Medium',
     color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
+    fontSize: 11,
   },
   quickJoinButton: {
     backgroundColor: Colors.blue,
@@ -465,22 +463,20 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   quickJoinButtonText: {
-    fontFamily: 'Viral-Black',
     color: 'white',
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   sectionContainer: {
     marginBottom: 14,
   },
   sectionTitle: {
-    fontFamily: 'Viral-Black',
     color: 'white',
-    fontSize: 18,
+    fontSize: 15,
+    fontWeight: 'bold',
     marginBottom: 2,
-    letterSpacing: -0.2,
   },
   sectionSubtitle: {
-    fontFamily: 'Fredoka_500Medium',
     color: 'rgba(255,255,255,0.6)',
     fontSize: 12,
     marginBottom: 6,
@@ -519,8 +515,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondaryActionButtonText: {
-    fontFamily: 'Viral-Black',
     color: 'white',
+    fontWeight: '600',
     fontSize: 15,
   },
   listContainer: {
@@ -533,9 +529,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   friendName: {
-    fontFamily: 'Viral-Bold',
     color: 'white',
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '600',
   },
   meBadge: {
     backgroundColor: 'rgba(10, 132, 255, 0.18)',
@@ -544,9 +540,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   meBadgeText: {
-    fontFamily: 'Viral-Black',
     color: Colors.blue,
     fontSize: 11,
+    fontWeight: 'bold',
   },
   friendActions: {
     flexDirection: 'row',
@@ -596,17 +592,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   emptyStateTitleText: {
-    fontFamily: 'Viral-Black',
     color: 'white',
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: 'bold',
   },
   emptyStateText: {
-    fontFamily: 'Viral-Black',
     color: 'white',
     fontSize: 15,
+    fontWeight: '600',
   },
   emptyStateSubText: {
-    fontFamily: 'Fredoka_500Medium',
     color: 'rgba(255,255,255,0.4)',
     fontSize: 12,
     textAlign: 'center',
@@ -631,9 +626,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   inviteButtonFullText: {
-    fontFamily: 'Viral-Black',
     color: 'white',
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   invitePillButton: {
     backgroundColor: Colors.blue,
@@ -642,9 +637,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   invitePillButtonText: {
-    fontFamily: 'Viral-Black',
     color: 'white',
     fontSize: 11,
+    fontWeight: 'bold',
   },
   searchResultsSection: {
     marginBottom: 6,
@@ -668,12 +663,10 @@ const styles = StyleSheet.create({
   publicRoomsTitle: {
     fontFamily: 'Viral-Black',
     color: 'white',
-    fontSize: 18,
+    fontSize: 20,
     marginBottom: 2,
-    letterSpacing: -0.2,
   },
   publicRoomsSubtitle: {
-    fontFamily: 'Fredoka_500Medium',
     color: 'rgba(255,255,255,0.6)',
     fontSize: 12,
   },
@@ -689,8 +682,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(10, 132, 255, 0.25)',
   },
   loginButtonText: {
-    fontFamily: 'Viral-Black',
     color: Colors.blue,
     fontSize: 12,
+    fontWeight: 'bold',
   },
 });

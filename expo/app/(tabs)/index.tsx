@@ -157,14 +157,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'Viral-Black',
-    fontSize: 26,
+    fontSize: 20,
     color: 'white',
-    letterSpacing: -0.3,
   },
   eyebrow: {
-    fontFamily: 'Viral-Black',
     color: 'rgba(255,255,255,0.45)',
     fontSize: 11,
+    fontWeight: '900',
     letterSpacing: 2,
     marginBottom: 2,
   },
@@ -176,9 +175,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   joinText: {
-    fontFamily: 'Viral-Black',
     color: '#fff',
     fontSize: 13,
+    fontWeight: '800',
   },
   profileButton: {
     width: 40,
@@ -218,14 +217,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   libraryTabText: {
-    fontFamily: 'Viral-Black',
     color: 'rgba(255,255,255,0.6)',
     fontSize: 12,
+    fontWeight: '600',
   },
   libraryTabTextActive: {
-    fontFamily: 'Viral-Black',
     color: 'white',
     fontSize: 12,
+    fontWeight: '600',
   },
   modeFilterContainer: {
     flexDirection: 'row',
@@ -248,14 +247,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(10, 132, 255, 0.10)',
   },
   modeFilterText: {
-    fontFamily: 'Fredoka_500Medium',
     color: 'rgba(255,255,255,0.6)',
     fontSize: 12,
+    fontWeight: '500',
     includeFontPadding: false,
   },
   modeFilterTextActive: {
-    fontFamily: 'Viral-Black',
     color: Colors.blue,
+    fontWeight: '600',
   },
   gamesGrid: {
     flexDirection: 'row',
@@ -283,7 +282,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   emptyStateDesc: {
-    fontFamily: 'Fredoka_500Medium',
     color: 'rgba(255,255,255,0.5)',
     fontSize: 13,
     textAlign: 'center',
