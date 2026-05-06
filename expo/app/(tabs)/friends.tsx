@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'Viral-Black',
-    fontSize: 20,
+    fontSize: 25,
     color: 'white',
   },
   notificationBadge: {
@@ -471,9 +471,9 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   sectionTitle: {
+    fontFamily: 'Viral-Black',
     color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
+    fontSize: 16,
     marginBottom: 2,
   },
   sectionSubtitle: {
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
   publicRoomsTitle: {
     fontFamily: 'Viral-Black',
     color: 'white',
-    fontSize: 20,
+    fontSize: 16,
     marginBottom: 2,
   },
   publicRoomsSubtitle: {

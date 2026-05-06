@@ -367,8 +367,8 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   title2: {
+    fontFamily: 'Viral-Black',
     fontSize: 22,
-    fontWeight: '500',
     color: Colors.secondary,
     marginBottom: 14,
   },
@@ -379,14 +379,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title1: {
+    fontFamily: 'Viral-Black',
     fontSize: 28,
-    fontWeight: 'bold',
     color: Colors.white,
     marginBottom: 14,
   },
   showcaseTitle: {
+    fontFamily: 'Viral-Black',
     fontSize: 34,
-    fontWeight: '900',
     color: Colors.mint,
     marginBottom: 10,
     textAlign: 'center',
@@ -499,9 +499,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
   },
   playButtonText: {
+    fontFamily: 'Viral-Black',
     color: Colors.white,
     fontSize: 17,
-    fontWeight: 'bold',
   },
 });
 

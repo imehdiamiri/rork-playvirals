@@ -32,7 +32,6 @@ export default function ToolsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.headerSubtitle}>PARTY KIT</Text>
             <Text style={styles.headerTitle}>Tools</Text>
           </View>
           <View style={{ flex: 1 }} />
@@ -55,7 +54,6 @@ export default function ToolsScreen() {
         <View style={styles.cardsSection}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderTextContainer}>
-              <Text style={styles.sectionSubtitle}>CARD LIBRARY</Text>
               <Text style={styles.sectionTitle}>Ready to Use Cards</Text>
             </View>
             <View style={{ flex: 1 }} />
@@ -162,15 +160,9 @@ const styles = StyleSheet.create({
   headerTextContainer: {
     gap: 2,
   },
-  headerSubtitle: {
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 2,
-    color: 'rgba(255,255,255,0.45)',
-  },
   headerTitle: {
     fontFamily: 'Viral-Black',
-    fontSize: 20,
+    fontSize: 25,
     color: 'white',
   },
   bookmarkButton: {
@@ -196,15 +188,9 @@ const styles = StyleSheet.create({
   sectionHeaderTextContainer: {
     gap: 2,
   },
-  sectionSubtitle: {
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 2,
-    color: 'rgba(255,255,255,0.45)',
-  },
   sectionTitle: {
     fontFamily: 'Viral-Black',
-    fontSize: 20,
+    fontSize: 16,
     color: 'white',
   },
   sectionTrailing: {

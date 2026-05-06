@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'Viral-Black',
-    fontSize: 20,
+    fontSize: 25,
     color: 'white',
   },
   profileButton: {
@@ -434,9 +434,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionTitle: {
+    fontFamily: 'Viral-Black',
     color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
+    fontSize: 16,
   },
   selectedVibeText: {
     fontSize: 12,

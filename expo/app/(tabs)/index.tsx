@@ -31,8 +31,7 @@ export default function GamesScreen() {
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 6, paddingBottom: 120 }]}>
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>WELCOME TO</Text>
-            <Text style={styles.title}>PlayVirals</Text>
+            <Text style={styles.title}>Games</Text>
           </View>
           <TouchableOpacity onPress={() => router.push('/lobby/join')} activeOpacity={0.85}>
             <LiquidGlass variant="high" radius={20} style={styles.joinButton} shadow={false}>
@@ -157,15 +156,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'Viral-Black',
-    fontSize: 20,
+    fontSize: 25,
     color: 'white',
-  },
-  eyebrow: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 2,
-    marginBottom: 2,
   },
   joinButton: {
     flexDirection: 'row',
