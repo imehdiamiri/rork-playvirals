@@ -40,7 +40,7 @@ export function GameCardView({ gameDef, isLocked = false, style }: GameCardViewP
             const details = GameModeDetails[mode];
             return (
               <View key={mode} style={styles.modeIconContainer}>
-                <IconSymbol name={details.icon as any} size={14} color="rgba(255,255,255,0.85)" />
+                <IconSymbol name={details.icon as any} size={9} color="rgba(255,255,255,0.6)" />
               </View>
             );
           })}
@@ -140,13 +140,11 @@ const styles = StyleSheet.create({
   },
   modesRow: {
     flexDirection: 'row',
-    gap: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 4,
   },
   modeIconContainer: {
-    width: 22,
-    height: 22,
+    width: 20,
+    height: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -81,7 +81,9 @@ const getAccentColor = (accentName: string): string => {
 };
 
 export const GameCardView: React.FC<GameCardViewProps> = ({ game, isLocked = false }) => {
-  // Unified design across iOS & Android — same gradient card on both platforms.
+  if (Platform.OS === 'android') {
+    return <AndroidGameCard game={game} isLocked={isLocked} />;
+  }
   return <IOSGameCard game={game} isLocked={isLocked} />;
 };
 
@@ -109,7 +111,7 @@ const IOSGameCard: React.FC<GameCardViewProps> = ({ game, isLocked }) => {
             const modeDetails = GameModeDetails[mode];
             return (
               <View key={mode} style={iosStyles.modePill}>
-                <IconSymbol name={modeDetails.icon as any} size={13} color="rgba(255,255,255,0.95)" weight="semibold" />
+                <IconSymbol name={modeDetails.icon as any} size={11} color="rgba(255,255,255,0.85)" />
               </View>
             );
           })}
@@ -228,11 +230,11 @@ const iosStyles = StyleSheet.create({
   },
   spacerMiddle1: { flex: 0.7, minHeight: 6 },
   spacerMiddle2: { flex: 0.5, minHeight: 4 },
-  modesContainer: { flexDirection: 'row', gap: 5, marginBottom: 4 },
+  modesContainer: { flexDirection: 'row', gap: 4, marginBottom: 4 },
   modePill: {
-    width: 24, height: 24, borderRadius: 12, overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    borderWidth: 0.5, borderColor: 'rgba(255, 255, 255, 0.28)',
+    width: 22, height: 22, borderRadius: 11, overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderWidth: 0.5, borderColor: 'rgba(255, 255, 255, 0.12)',
     justifyContent: 'center', alignItems: 'center',
   },
   playerCount: { fontSize: 10, fontWeight: 'bold', color: 'rgba(255, 255, 255, 0.7)' },
