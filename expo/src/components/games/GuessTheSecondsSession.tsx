@@ -3,6 +3,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import { GameSession } from '@/src/store/useGameStore';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useGameSync } from '@/src/hooks/useGameSync';
+import { useMultiplayerStore } from '@/src/store/useMultiplayerStore';
 
 // Platform-safe haptics
 let Haptics: any = null;
@@ -24,10 +26,31 @@ interface TurnResult {
 
 type TurnPhase = 'ready' | 'running' | 'reveal';
 
+interface SyncState {
+  activeTurnIndex: number;
+  turnPhase: TurnPhase;
+  startedAt: number | null;          // epoch ms when host started; clients derive elapsed
+  results: TurnResult[];
+  roundTargets: Record<number, number>;
+  lastResult: TurnResult | null;
+  selectedTime: number;              // current edit value for round target
+}
+
+const initialSync: SyncState = {
+  activeTurnIndex: 0,
+  turnPhase: 'ready',
+  startedAt: null,
+  results: [],
+  roundTargets: {},
+  lastResult: null,
+  selectedTime: 15.0,
+};
+
 export function GuessTheSecondsSession({ session }: Props) {
   const players = session.players;
   const roundsPerPlayer = Math.max(1, session.maxRounds || 3);
   const totalTurns = players.length * roundsPerPlayer;
+  const { localPlayerId } = useMultiplayerStore();
 
   // Build turn order: [P1-R1, P2-R1, P1-R2, P2-R2, ...]
   const turnOrder = useMemo(() => {
@@ -40,16 +63,126 @@ export function GuessTheSecondsSession({ session }: Props) {
     return order;
   }, [players.length, roundsPerPlayer]);
 
-  const [selectedTime, setSelectedTime] = useState(15.0);
-  const [activeTurnIndex, setActiveTurnIndex] = useState(0);
-  const [turnPhase, setTurnPhase] = useState<TurnPhase>('ready');
-  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [sync, setSync] = useState<SyncState>(initialSync);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [results, setResults] = useState<TurnResult[]>([]);
-  const [roundTargets, setRoundTargets] = useState<Record<number, number>>({});
-  const [lastResult, setLastResult] = useState<TurnResult | null>(null);
 
-  // Guard: if no players somehow, show nothing (prevents 0-turn instant finish)
+  // Authoritative reducer — runs on host only (or single-device).
+  const apply = useCallback((type: string, data: any, prev: SyncState): SyncState => {
+    switch (type) {
+      case 'setTarget': {
+        const next = Math.min(Math.max(Math.round(data.value * 100) / 100, 1), 60);
+        return { ...prev, selectedTime: next };
+      }
+      case 'start': {
+        if (prev.turnPhase !== 'ready' || prev.activeTurnIndex >= totalTurns) return prev;
+        const turn = turnOrder[prev.activeTurnIndex];
+        const roundTargets = { ...prev.roundTargets };
+        if (roundTargets[turn.round] === undefined) {
+          roundTargets[turn.round] = Math.round(prev.selectedTime * 100) / 100;
+        }
+        return {
+          ...prev,
+          turnPhase: 'running',
+          startedAt: Date.now(),
+          roundTargets,
+        };
+      }
+      case 'stop': {
+        if (prev.turnPhase !== 'running' || !prev.startedAt) return prev;
+        const turn = turnOrder[prev.activeTurnIndex];
+        const player = players[turn.playerIndex];
+        if (!player) return prev;
+        const actualTime = Math.round(((Date.now() - prev.startedAt) / 1000) * 100) / 100;
+        const targetTime = prev.roundTargets[turn.round] ?? Math.round(prev.selectedTime * 100) / 100;
+        const difference = Math.round(Math.abs(targetTime - actualTime) * 100) / 100;
+        const result: TurnResult = {
+          playerName: player.displayName,
+          round: turn.round,
+          targetTime,
+          actualTime,
+          difference,
+        };
+        return {
+          ...prev,
+          turnPhase: 'reveal',
+          startedAt: null,
+          results: [...prev.results, result],
+          lastResult: result,
+        };
+      }
+      case 'continue': {
+        const nextIdx = prev.activeTurnIndex + 1;
+        return {
+          ...prev,
+          activeTurnIndex: nextIdx,
+          turnPhase: 'ready',
+          lastResult: null,
+        };
+      }
+      case 'playAgain':
+        return { ...initialSync };
+      default:
+        return prev;
+    }
+  }, [totalTurns, turnOrder, players]);
+
+  const onActionReceived = useCallback((type: string, data: any) => {
+    setSync(prev => {
+      const next = apply(type, data, prev);
+      // Host syncs the resulting state below via syncState callback.
+      return next;
+    });
+  }, [apply]);
+
+  const { syncState, sendAction, isHost, isMultiplayer } = useGameSync<SyncState>(
+    session.mode,
+    sync,
+    setSync,
+    onActionReceived
+  );
+
+  // Host: whenever local sync changes, push the snapshot. (Host's reducer
+  // updates state immediately; broadcast keeps clients in lock step.)
+  useEffect(() => {
+    if (!isMultiplayer || !isHost) return;
+    syncState(sync);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sync, isHost, isMultiplayer]);
+
+  // Compute elapsed time locally for smooth UI on every device.
+  useEffect(() => {
+    if (sync.turnPhase !== 'running' || !sync.startedAt) {
+      setElapsedTime(0);
+      return;
+    }
+    const tick = () => setElapsedTime((Date.now() - (sync.startedAt as number)) / 1000);
+    tick();
+    const id = setInterval(tick, 50);
+    return () => clearInterval(id);
+  }, [sync.turnPhase, sync.startedAt]);
+
+  // ───────── Derived state ─────────
+  const isFinished = sync.activeTurnIndex >= totalTurns;
+  const currentTurn = !isFinished ? turnOrder[sync.activeTurnIndex] : null;
+  const currentRoundNumber = currentTurn ? currentTurn.round : roundsPerPlayer;
+  const currentPlayer = currentTurn ? players[currentTurn.playerIndex] : null;
+  const isFirstPlayerOfCurrentRound = currentTurn ? currentTurn.playerIndex === 0 : false;
+  const currentRoundTargetLocked = sync.roundTargets[currentRoundNumber] !== undefined;
+  const displayedTargetTime = sync.roundTargets[currentRoundNumber] ?? sync.selectedTime;
+
+  // In multi-device, only the active player drives controls. In single-device
+  // anyone can drive (one phone passed around).
+  const isLocalActive = !isMultiplayer
+    ? true
+    : !!currentPlayer && (currentPlayer.id === localPlayerId || isHost);
+
+  const canEditTargetTime =
+    sync.turnPhase === 'ready' &&
+    !isFinished &&
+    isFirstPlayerOfCurrentRound &&
+    !currentRoundTargetLocked &&
+    isLocalActive;
+
   if (players.length === 0) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -58,103 +191,32 @@ export function GuessTheSecondsSession({ session }: Props) {
     );
   }
 
-  const isFinished = activeTurnIndex >= totalTurns;
-  const currentTurn = !isFinished ? turnOrder[activeTurnIndex] : null;
-  const currentRoundNumber = currentTurn ? currentTurn.round : roundsPerPlayer;
-  const currentPlayer = currentTurn ? players[currentTurn.playerIndex] : null;
-  const isFirstPlayerOfCurrentRound = currentTurn ? currentTurn.playerIndex === 0 : false;
-  const currentRoundTargetLocked = roundTargets[currentRoundNumber] !== undefined;
-  const displayedTargetTime = roundTargets[currentRoundNumber] ?? selectedTime;
-
-  const canEditTargetTime = turnPhase === 'ready' && !isFinished && isFirstPlayerOfCurrentRound && !currentRoundTargetLocked;
-
-  // Render timer
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (turnPhase === 'running' && startedAt) {
-      interval = setInterval(() => {
-        setElapsedTime((Date.now() - startedAt) / 1000);
-      }, 50);
-    }
-    return () => clearInterval(interval);
-  }, [turnPhase, startedAt]);
-
+  // ───────── Action dispatchers ─────────
   const adjustTargetTime = (delta: number) => {
     if (!canEditTargetTime) return;
     Haptics?.impactAsync?.(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedTime(prev => Math.min(Math.max(Math.round((prev + delta) * 100) / 100, 1), 60));
+    sendAction('setTarget', { value: sync.selectedTime + delta });
   };
 
   const startTurn = () => {
-    if (turnPhase !== 'ready' || isFinished) return;
-
-    if (roundTargets[currentRoundNumber] === undefined) {
-      setRoundTargets(prev => ({
-        ...prev,
-        [currentRoundNumber]: Math.round(selectedTime * 100) / 100
-      }));
-    }
-
+    if (sync.turnPhase !== 'ready' || isFinished || !isLocalActive) return;
     Haptics?.impactAsync?.(Haptics.ImpactFeedbackStyle.Medium);
-    setStartedAt(Date.now());
-    setElapsedTime(0);
-    setTurnPhase('running');
+    sendAction('start', {});
   };
 
   const stopTurn = () => {
-    if (turnPhase !== 'running' || !startedAt || !currentPlayer) return;
-
-    const actualTime = Math.round(((Date.now() - startedAt) / 1000) * 100) / 100;
-    const targetTime = roundTargets[currentRoundNumber] ?? Math.round(selectedTime * 100) / 100;
-    const difference = Math.round(Math.abs(targetTime - actualTime) * 100) / 100;
-
-    const turn: TurnResult = {
-      playerName: currentPlayer.displayName,
-      round: currentRoundNumber,
-      targetTime,
-      actualTime,
-      difference
-    };
-
-    // Haptic feedback based on accuracy
-    if (difference === 0) {
-      Haptics?.notificationAsync?.(Haptics.NotificationFeedbackType.Success);
-    } else if (difference < 1) {
-      Haptics?.impactAsync?.(Haptics.ImpactFeedbackStyle.Light);
-    } else if (difference <= 2) {
-      Haptics?.impactAsync?.(Haptics.ImpactFeedbackStyle.Medium);
-    } else {
-      Haptics?.notificationAsync?.(Haptics.NotificationFeedbackType.Error);
-    }
-
-    setResults(prev => [...prev, turn]);
-    setLastResult(turn);
-    setElapsedTime(actualTime);
-    setStartedAt(null);
-    setTurnPhase('reveal'); // PAUSE on result — don't advance yet
+    if (sync.turnPhase !== 'running' || !isLocalActive) return;
+    Haptics?.notificationAsync?.(Haptics.NotificationFeedbackType.Success);
+    sendAction('stop', {});
   };
 
   const continueToNextTurn = () => {
-    setActiveTurnIndex(prev => prev + 1);
-    setTurnPhase('ready');
-    setLastResult(null);
-    setElapsedTime(0);
-
-    // Check if game just finished
-    if (activeTurnIndex + 1 >= totalTurns) {
-      Haptics?.notificationAsync?.(Haptics.NotificationFeedbackType.Success);
-    }
+    Haptics?.impactAsync?.(Haptics.ImpactFeedbackStyle.Light);
+    sendAction('continue', {});
   };
 
   const playAgain = () => {
-    setActiveTurnIndex(0);
-    setTurnPhase('ready');
-    setResults([]);
-    setRoundTargets({});
-    setLastResult(null);
-    setElapsedTime(0);
-    setStartedAt(null);
-    setSelectedTime(15.0);
+    sendAction('playAgain', {});
   };
 
   const getAccuracyBand = (diff: number) => {
@@ -167,12 +229,17 @@ export function GuessTheSecondsSession({ session }: Props) {
   // Build per-player score summary
   const playerScores = useMemo(() => {
     return players.map(p => {
-      const pResults = results.filter(r => r.playerName === p.displayName);
+      const pResults = sync.results.filter(r => r.playerName === p.displayName);
       const total = pResults.reduce((sum, r) => sum + r.difference, 0);
       const avg = pResults.length > 0 ? total / pResults.length : 0;
       return { player: p.displayName, total, avg, turns: pResults.length };
     }).sort((a, b) => a.total - b.total);
-  }, [results, players]);
+  }, [sync.results, players]);
+
+  // Whose-turn label suffix used in multi-device to remind non-active players to watch.
+  const turnHint = isMultiplayer && !isLocalActive && currentPlayer
+    ? `Waiting for ${currentPlayer.displayName}…`
+    : null;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -190,61 +257,66 @@ export function GuessTheSecondsSession({ session }: Props) {
           )}
           <View style={{flex: 1}}/>
           <Text style={[styles.statusLabel, {
-            color: turnPhase === 'running' ? Colors.blue
-              : turnPhase === 'reveal' ? Colors.yellow
+            color: sync.turnPhase === 'running' ? Colors.blue
+              : sync.turnPhase === 'reveal' ? Colors.yellow
               : isFinished ? Colors.green
               : 'rgba(255,255,255,0.5)'
           }]}>
-            {isFinished ? 'Finished' : turnPhase === 'running' ? 'Running' : turnPhase === 'reveal' ? 'Result' : 'Ready'}
+            {isFinished ? 'Finished' : sync.turnPhase === 'running' ? 'Running' : sync.turnPhase === 'reveal' ? 'Result' : 'Ready'}
           </Text>
         </View>
+        {turnHint && <Text style={styles.waitingHint}>{turnHint}</Text>}
       </View>
 
-      {/* Turn Result Banner (shown during reveal phase) */}
-      {turnPhase === 'reveal' && lastResult && (
-        <View style={[styles.card, { borderColor: getAccuracyBand(lastResult.difference).color + '55' }]}>
+      {/* Turn Result Banner */}
+      {sync.turnPhase === 'reveal' && sync.lastResult && (
+        <View style={[styles.card, { borderColor: getAccuracyBand(sync.lastResult.difference).color + '55' }]}>
           <View style={styles.resultHeader}>
-            <IconSymbol name="flag.checkered" size={16} color={getAccuracyBand(lastResult.difference).color} />
-            <Text style={styles.resultTitle}>{lastResult.playerName} • Round {lastResult.round}</Text>
+            <IconSymbol name="flag.checkered" size={16} color={getAccuracyBand(sync.lastResult.difference).color} />
+            <Text style={styles.resultTitle}>{sync.lastResult.playerName} • Round {sync.lastResult.round}</Text>
             <View style={{flex: 1}}/>
-            <View style={[styles.badge, { backgroundColor: getAccuracyBand(lastResult.difference).color + '33' }]}>
-              <Text style={[styles.badgeText, { color: getAccuracyBand(lastResult.difference).color }]}>
-                {getAccuracyBand(lastResult.difference).title}
+            <View style={[styles.badge, { backgroundColor: getAccuracyBand(sync.lastResult.difference).color + '33' }]}>
+              <Text style={[styles.badgeText, { color: getAccuracyBand(sync.lastResult.difference).color }]}>
+                {getAccuracyBand(sync.lastResult.difference).title}
               </Text>
             </View>
           </View>
           <View style={styles.resultMetrics}>
             <View style={styles.metricBox}>
               <Text style={styles.metricLabel}>Target</Text>
-              <Text style={[styles.metricValue, { color: 'rgba(255,255,255,0.7)' }]}>{lastResult.targetTime.toFixed(2)}</Text>
+              <Text style={[styles.metricValue, { color: 'rgba(255,255,255,0.7)' }]}>{sync.lastResult.targetTime.toFixed(2)}</Text>
             </View>
             <View style={styles.metricBox}>
               <Text style={styles.metricLabel}>Stopped</Text>
-              <Text style={styles.metricValue}>{lastResult.actualTime.toFixed(2)}</Text>
+              <Text style={styles.metricValue}>{sync.lastResult.actualTime.toFixed(2)}</Text>
             </View>
             <View style={styles.metricBox}>
               <Text style={styles.metricLabel}>Diff</Text>
-              <Text style={[styles.metricValue, { color: getAccuracyBand(lastResult.difference).color }]}>
-                {lastResult.difference.toFixed(2)}
+              <Text style={[styles.metricValue, { color: getAccuracyBand(sync.lastResult.difference).color }]}>
+                {sync.lastResult.difference.toFixed(2)}
               </Text>
             </View>
           </View>
 
-          {/* Continue button */}
           <Pressable
-            style={[styles.primaryButton, { backgroundColor: Colors.blue, marginTop: 16 }]}
+            style={[
+              styles.primaryButton,
+              { backgroundColor: Colors.blue, marginTop: 16 },
+              isMultiplayer && !isHost && { opacity: 0.5 },
+            ]}
             onPress={continueToNextTurn}
+            disabled={isMultiplayer && !isHost}
           >
             <IconSymbol name="arrow.right" size={20} color="white" />
             <Text style={styles.primaryButtonText}>
-              {activeTurnIndex + 1 >= totalTurns ? 'See Results' : 'Next Turn'}
+              {sync.activeTurnIndex + 1 >= totalTurns ? 'See Results' : 'Next Turn'}
             </Text>
           </Pressable>
         </View>
       )}
 
       {/* Control Card */}
-      {!isFinished && turnPhase !== 'reveal' && (
+      {!isFinished && sync.turnPhase !== 'reveal' && (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Target Time</Text>
           <Text style={styles.sectionSubtitle}>
@@ -261,9 +333,12 @@ export function GuessTheSecondsSession({ session }: Props) {
             </Pressable>
 
             <View style={styles.timeDisplayBox}>
-              <Text style={[styles.timeDisplay, turnPhase === 'running' && styles.timeDisplayRunning]}>
-                {turnPhase === 'running' ? '•••••' : displayedTargetTime.toFixed(2)}
+              <Text style={[styles.timeDisplay, sync.turnPhase === 'running' && styles.timeDisplayRunning]}>
+                {sync.turnPhase === 'running' ? '•••••' : displayedTargetTime.toFixed(2)}
               </Text>
+              {sync.turnPhase === 'running' && (
+                <Text style={styles.elapsedHint}>{elapsedTime.toFixed(1)}s</Text>
+              )}
             </View>
 
             <Pressable
@@ -276,14 +351,22 @@ export function GuessTheSecondsSession({ session }: Props) {
           </View>
 
           <View style={styles.controlButtons}>
-            {turnPhase === 'ready' && (
-              <Pressable style={[styles.primaryButton, { backgroundColor: Colors.blue }]} onPress={startTurn}>
+            {sync.turnPhase === 'ready' && (
+              <Pressable
+                style={[styles.primaryButton, { backgroundColor: Colors.blue }, !isLocalActive && { opacity: 0.5 }]}
+                onPress={startTurn}
+                disabled={!isLocalActive}
+              >
                 <IconSymbol name="play.fill" size={20} color="white" />
                 <Text style={styles.primaryButtonText}>Start</Text>
               </Pressable>
             )}
-            {turnPhase === 'running' && (
-              <Pressable style={[styles.primaryButton, { backgroundColor: Colors.red }]} onPress={stopTurn}>
+            {sync.turnPhase === 'running' && (
+              <Pressable
+                style={[styles.primaryButton, { backgroundColor: Colors.red }, !isLocalActive && { opacity: 0.5 }]}
+                onPress={stopTurn}
+                disabled={!isLocalActive}
+              >
                 <IconSymbol name="stop.fill" size={20} color="white" />
                 <Text style={styles.primaryButtonText}>Stop</Text>
               </Pressable>
@@ -292,15 +375,13 @@ export function GuessTheSecondsSession({ session }: Props) {
         </View>
       )}
 
-      {/* Live Score Table (visible during gameplay when we have results) */}
-      {results.length > 0 && !isFinished && (
+      {/* Live Score Table */}
+      {sync.results.length > 0 && !isFinished && (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Scores</Text>
           <Text style={styles.sectionSubtitle}>Lower difference is better</Text>
 
-          {/* Per-round results */}
           <View style={styles.scoreTable}>
-            {/* Header row */}
             <View style={styles.scoreHeaderRow}>
               <Text style={[styles.scoreHeaderCell, { flex: 2 }]}>Player</Text>
               {Array.from({ length: currentRoundNumber }, (_, i) => (
@@ -309,12 +390,17 @@ export function GuessTheSecondsSession({ session }: Props) {
               <Text style={[styles.scoreHeaderCell, { fontWeight: 'bold' }]}>Total</Text>
             </View>
 
-            {/* Player rows */}
-            {players.map((p, idx) => {
-              const pResults = results.filter(r => r.playerName === p.displayName);
+            {players.map((p) => {
+              const pResults = sync.results.filter(r => r.playerName === p.displayName);
               const total = pResults.reduce((sum, r) => sum + r.difference, 0);
               return (
-                <View key={p.id} style={[styles.scoreRow, currentPlayer?.displayName === p.displayName && turnPhase !== 'reveal' && styles.scoreRowActive]}>
+                <View
+                  key={p.id}
+                  style={[
+                    styles.scoreRow,
+                    currentPlayer?.displayName === p.displayName && sync.turnPhase !== 'reveal' && styles.scoreRowActive,
+                  ]}
+                >
                   <Text style={[styles.scoreCell, { flex: 2 }]} numberOfLines={1}>{p.displayName}</Text>
                   {Array.from({ length: currentRoundNumber }, (_, roundIdx) => {
                     const roundResult = pResults.find(r => r.round === roundIdx + 1);
@@ -357,10 +443,14 @@ export function GuessTheSecondsSession({ session }: Props) {
             ))}
           </View>
 
-          {/* Play Again */}
           <Pressable
-            style={[styles.primaryButton, { backgroundColor: Colors.green, marginTop: 16 }]}
+            style={[
+              styles.primaryButton,
+              { backgroundColor: Colors.green, marginTop: 16 },
+              isMultiplayer && !isHost && { opacity: 0.5 },
+            ]}
             onPress={playAgain}
+            disabled={isMultiplayer && !isHost}
           >
             <IconSymbol name="arrow.counterclockwise" size={20} color="white" />
             <Text style={styles.primaryButtonText}>Play Again</Text>
@@ -373,11 +463,7 @@ export function GuessTheSecondsSession({ session }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    gap: 16,
-    paddingBottom: 40,
-  },
+  container: { padding: 16, gap: 16, paddingBottom: 40 },
   card: {
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 24,
@@ -385,224 +471,76 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  roundText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
-    fontWeight: '600',
-  },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  roundText: { color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '600' },
   nowPlayingBadge: {
     backgroundColor: 'rgba(52, 199, 89, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
   },
-  nowPlayingText: {
-    color: Colors.green,
-    fontSize: 12,
-    fontWeight: 'bold',
+  nowPlayingText: { color: Colors.green, fontSize: 12, fontWeight: 'bold' },
+  statusLabel: { fontSize: 13, fontWeight: 'bold' },
+  waitingHint: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 12, marginTop: 8, fontStyle: 'italic',
   },
-  statusLabel: {
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
-  resultHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  resultTitle: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  resultMetrics: {
-    flexDirection: 'row',
-    gap: 10,
-  },
+  resultHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  resultTitle: { color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '600' },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  badgeText: { fontSize: 12, fontWeight: 'bold' },
+  resultMetrics: { flexDirection: 'row', gap: 10 },
   metricBox: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 14,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    flex: 1, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14,
+    paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
   },
-  metricLabel: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 11,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  metricValue: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  sectionTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  sectionSubtitle: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 13,
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  selectorArea: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
-  },
+  metricLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: '600', marginBottom: 4 },
+  metricValue: { color: 'white', fontSize: 20, fontWeight: '900' },
+  sectionTitle: { color: 'white', fontSize: 20, fontWeight: 'bold' },
+  sectionSubtitle: { color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 4, marginBottom: 16 },
+  selectorArea: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
   stepperButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(10, 132, 255, 0.9)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 60, height: 60, borderRadius: 30,
+    backgroundColor: 'rgba(10, 132, 255, 0.9)', alignItems: 'center', justifyContent: 'center',
   },
-  stepperDisabled: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
+  stepperDisabled: { backgroundColor: 'rgba(255,255,255,0.06)' },
   timeDisplayBox: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 24,
-    paddingVertical: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 24,
+    paddingVertical: 28, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
   },
-  timeDisplay: {
-    color: 'white',
-    fontSize: 48,
-    fontWeight: '900',
-  },
-  timeDisplayRunning: {
-    color: 'rgba(255,255,255,0.5)',
-  },
-  controlButtons: {
-    gap: 14,
-  },
+  timeDisplay: { color: 'white', fontSize: 48, fontWeight: '900' },
+  timeDisplayRunning: { color: 'rgba(255,255,255,0.5)' },
+  elapsedHint: { color: 'rgba(255,255,255,0.4)', fontSize: 13, marginTop: 4, fontVariant: ['tabular-nums'] },
+  controlButtons: { gap: 14 },
   primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 20,
-    borderRadius: 100,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 20, borderRadius: 100,
   },
-  primaryButtonText: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  // Score table
-  scoreTable: {
-    gap: 2,
-  },
+  primaryButtonText: { color: 'white', fontSize: 20, fontWeight: 'bold' },
+  scoreTable: { gap: 2 },
   scoreHeaderRow: {
-    flexDirection: 'row',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row', paddingVertical: 8, paddingHorizontal: 4,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)',
   },
-  scoreHeaderCell: {
-    flex: 1,
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderRadius: 10,
-  },
-  scoreRowActive: {
-    backgroundColor: 'rgba(10, 132, 255, 0.12)',
-  },
-  scoreCell: {
-    flex: 1,
-    color: 'white',
-    fontSize: 14,
-    textAlign: 'center',
-    fontVariant: ['tabular-nums'],
-  },
-  // Ranking
-  rankingList: {
-    gap: 10,
-    marginTop: 10,
-  },
+  scoreHeaderCell: { flex: 1, color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '600', textAlign: 'center' },
+  scoreRow: { flexDirection: 'row', paddingVertical: 10, paddingHorizontal: 4, borderRadius: 10 },
+  scoreRowActive: { backgroundColor: 'rgba(10, 132, 255, 0.12)' },
+  scoreCell: { flex: 1, color: 'white', fontSize: 14, textAlign: 'center', fontVariant: ['tabular-nums'] },
+  rankingList: { gap: 10, marginTop: 10 },
   rankRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: 'rgba(255,255,255,0.04)', padding: 12, borderRadius: 16,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
   },
-  winnerRow: {
-    backgroundColor: 'rgba(52, 199, 89, 0.12)',
-    borderColor: 'rgba(52, 199, 89, 0.2)',
-  },
+  winnerRow: { backgroundColor: 'rgba(52, 199, 89, 0.12)', borderColor: 'rgba(52, 199, 89, 0.2)' },
   rankBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center',
   },
-  winnerBadge: {
-    backgroundColor: 'rgba(255, 214, 10, 0.22)',
-  },
-  rankBadgeText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  winnerBadgeText: {
-    color: Colors.yellow,
-  },
-  rankName: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  rankAvg: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  rankTotal: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  winnerTotal: {
-    color: Colors.green,
-  }
+  winnerBadge: { backgroundColor: 'rgba(255, 214, 10, 0.22)' },
+  rankBadgeText: { color: 'white', fontWeight: 'bold' },
+  winnerBadgeText: { color: Colors.yellow },
+  rankName: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+  rankAvg: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 2 },
+  rankTotal: { color: 'white', fontSize: 20, fontWeight: 'bold' },
+  winnerTotal: { color: Colors.green },
 });

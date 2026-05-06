@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from 'react-native';
 import { GameSession } from '@/src/store/useGameStore';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { ResultsScoreboard, RankEntry } from './ResultsScoreboard';
 
 import * as Haptics from '@/src/utils/safeHaptics';
 
@@ -475,21 +476,21 @@ export function PassGuessSession({ session }: Props) {
       )}
 
       {phase === 'finished' && (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { alignItems: 'center' }]}>
-          <IconSymbol name="trophy.fill" size={64} color={Colors.yellow} style={{ marginTop: 40 }} />
-          <Text style={[styles.title, { marginTop: 20 }]}>Final Results</Text>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ResultsScoreboard
+            title="Final Results"
+            entries={session.players
+              .slice()
+              .sort((a, b) => scores[b.id] - scores[a.id])
+              .map((p): RankEntry => ({
+                id: p.id,
+                name: p.displayName,
+                primary: `${scores[p.id] ?? 0} pts`,
+                nameColor: getPlayerColor(session.players.findIndex(x => x.id === p.id)),
+              }))}
+          />
 
-          <View style={[styles.card, { width: '100%', marginTop: 20 }]}>
-            {session.players.slice().sort((a,b) => scores[b.id] - scores[a.id]).map((p, i) => (
-              <HStack key={p.id} style={styles.leaderboardRow}>
-                <Text style={[styles.rank, i === 0 && { color: Colors.yellow }]}>#{i + 1}</Text>
-                <Text style={[styles.leaderboardName, { color: getPlayerColor(session.players.findIndex(x => x.id === p.id)) }]}>{p.displayName}</Text>
-                <Text style={styles.scoreText}>{scores[p.id]} pts</Text>
-              </HStack>
-            ))}
-          </View>
-
-          <Pressable style={[styles.primaryBtn, { marginTop: 20, width: '100%', backgroundColor: Colors.green }]}
+          <Pressable style={[styles.primaryBtn, { marginTop: 20, backgroundColor: Colors.green }]}
             onPress={() => { setRoundNumber(1); setPhase('intro'); setScores(() => { const s: Record<string,number> = {}; session.players.forEach(p => s[p.id] = 0); return s; }); }}>
             <Text style={styles.primaryBtnText}>Play Again</Text>
           </Pressable>

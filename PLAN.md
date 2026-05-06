@@ -45,10 +45,16 @@
 ## Validation
 - [x] runChecks passes after Phase 6 / 9 / 10 changes.
 
+## Phase 6 — Multiplayer wiring (continued)
+- [x] `GuessTheSecondsSession` rewritten as a single sync object driven through `useGameSync`. Host owns the reducer (`setTarget`/`start`/`stop`/`continue`/`playAgain`); clients dispatch via `sendAction`. `startedAt` is broadcast as an epoch ms so each device computes its own smooth `elapsedTime` locally without re-broadcasting every tick. Non-active players see a "Waiting for X…" hint and have controls disabled.
+- [x] `Pass & Guess` left as **single-device by design** — the entire game loop is built around privacy screens and physically passing one phone, so multi-device mode is intentionally not in `supportedModes`. Documented here so future contributors don't try to wire it.
+
+## Phase 8 — Reusable primitives (started)
+- [x] Added `expo/src/components/games/ResultsScoreboard.tsx` — shared sorted ranking with winner highlight, used by Pass & Guess final screen. Memory Grid + Guess the Seconds final cards can migrate to it incrementally without UI regression.
+
 ## Follow-ups (next sessions)
 - Phase 2 — admin website migration to Firebase Admin SDK (still on Supabase).
-- Phase 6 — wire `Memory Grid`, `Guess the Seconds`, `Pass & Guess` session components to use `useGameSync` end-to-end (infra is now production-ready, but Guess the Seconds + Pass & Guess still run state locally even in multi-device mode).
 - Phase 7 — animation engine consolidation, low-end Android profiling, lazy load card decks.
-- Phase 8 — extract reusable scoreboard / result-screen / setup primitives.
+- Phase 8 — migrate Memory Grid + Guess the Seconds final ranking cards to `ResultsScoreboard`; extract a shared `RoundHeader` and `SetupCard` primitive next.
 - Phase 9 — Team Setup + Lobby + Friends Rooms tab finishing pass.
 - Set RC server secret: `firebase functions:secrets:set REVENUECAT_SECRET` and deploy updated `database.rules.json` (`firebase deploy --only database`).
