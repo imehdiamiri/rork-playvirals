@@ -20,7 +20,6 @@ import { usePaywallStore } from '@/src/store/usePaywallStore';
 import { useAudioPreload } from '@/src/hooks/useAudioPreload';
 import { ToastOverlay } from '@/src/components/ToastOverlay';
 import { RootErrorBoundary } from '@/src/components/ErrorBoundary';
-import { DeviceIdentity } from '@/src/utils/DeviceIdentity';
 import { setUserOnline, setUserOffline } from '@/src/lib/firebase';
 
 export const unstable_settings = {
@@ -56,7 +55,6 @@ export default function RootLayout() {
   useEffect(() => {
     setIsMounted(true);
     initialize();
-    DeviceIdentity.init(); // warm device ID cache
   }, [initialize]);
 
   // Bridge Firebase auth → economy listener + RevenueCat configure.

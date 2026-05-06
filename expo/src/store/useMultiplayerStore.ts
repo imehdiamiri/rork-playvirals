@@ -1,7 +1,21 @@
 import { create } from 'zustand';
-import { multiplayerService, MultiplayerRoom, MultiplayerPlayer } from '../services/MultiplayerService';
+import { multiplayerService, MultiplayerRoom } from '../services/MultiplayerService';
 import { gameSyncService, GameStatePayload, PlayerAction } from '../services/GameSyncService';
+import { auth } from '../lib/firebase';
 
+/**
+ * useMultiplayerStore — single source of truth for the active room session.
+ *
+ * Identity: `localPlayerId` is ALWAYS `auth.currentUser.uid`. RTDB rules
+ * require this for player/presence/action writes. Anonymous users get a
+ * persistent uid via Firebase anonymous sign-in (handled in _layout.tsx),
+ * so even guest play works without random ids.
+ *
+ * Host migration: when the current host's player row disappears (left or
+ * presence timed out) the store calls `multiplayerService.claimHost`. The
+ * lowest joinedAt remaining player wins. Failure is silent (another peer
+ * already won the race).
+ */
 interface MultiplayerState {
   currentRoom: MultiplayerRoom | null;
   roomCode: string | null;
@@ -9,18 +23,18 @@ interface MultiplayerState {
   localPlayerId: string | null;
   error: string | null;
   isBusy: boolean;
-  
+
   // Game sync state
   gameState: GameStatePayload | null;
   playerActions: Record<string, PlayerAction>;
   presence: Record<string, { online: boolean; lastSeen: number }>;
-  
+
   createRoom: (gameId: string, hostName: string) => Promise<string>;
   joinRoom: (roomCode: string, playerName: string) => Promise<void>;
   leaveRoom: () => Promise<void>;
   startGame: () => Promise<void>;
   clearError: () => void;
-  
+
   // Game sync methods
   initGameSync: (initialState: GameStatePayload) => Promise<void>;
   broadcastState: (partialState: Partial<GameStatePayload>) => Promise<void>;
@@ -36,6 +50,23 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
   let actionsUnsub: (() => void) | null = null;
   let presenceUnsub: (() => void) | null = null;
 
+  // Try once to promote ourselves to host when the previous host disappears.
+  // RTDB rules + claimHost() guarantee at most one peer succeeds.
+  function maybeClaimHost(room: MultiplayerRoom | null): void {
+    if (!room) return;
+    const myId = get().localPlayerId;
+    if (!myId) return;
+    const players = room.players || {};
+    const hostStillPresent = !!(room.hostId && players[room.hostId]);
+    if (hostStillPresent) return;
+    if (!players[myId]) return;
+    const candidates = Object.values(players).sort(
+      (a: any, b: any) => (a.joinedAt || 0) - (b.joinedAt || 0)
+    );
+    if (candidates[0]?.id !== myId) return;
+    multiplayerService.claimHost(room.roomCode).catch(() => {});
+  }
+
   return {
     currentRoom: null,
     roomCode: null,
@@ -50,29 +81,33 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
     createRoom: async (gameId: string, hostName: string) => {
       set({ isBusy: true, error: null });
       try {
-        const localId = `user_${Math.random().toString(36).substr(2, 9)}`;
-        const code = await multiplayerService.createRoom(gameId, hostName, localId);
-        
-        set({ 
-          roomCode: code, 
-          isHost: true, 
-          localPlayerId: localId,
-          isBusy: false 
+        const { roomCode, hostId } = await multiplayerService.createRoom(gameId, hostName);
+
+        set({
+          roomCode,
+          isHost: true,
+          localPlayerId: hostId,
+          isBusy: false,
         });
 
-        unsubscribe = multiplayerService.listenToRoom(code, (room) => {
-          if (!room && get().currentRoom) {
-            set({ currentRoom: null, roomCode: null, error: 'Room was closed by host' });
-            if (unsubscribe) unsubscribe();
-          } else {
-            set({ currentRoom: room });
+        unsubscribe = multiplayerService.listenToRoom(roomCode, (room) => {
+          if (!room || room.status === 'closed') {
+            if (get().currentRoom) {
+              set({ currentRoom: null, roomCode: null, error: 'Room was closed' });
+              if (unsubscribe) unsubscribe();
+            }
+            return;
           }
+          // Reflect actual host on the room snapshot (in case migration happened).
+          set({
+            currentRoom: room,
+            isHost: room.hostId === get().localPlayerId,
+          });
+          maybeClaimHost(room);
         });
 
-        // Set presence
-        await gameSyncService.setPresence(code, localId);
-
-        return code;
+        await gameSyncService.setPresence(roomCode, hostId);
+        return roomCode;
       } catch (err: any) {
         set({ error: err.message, isBusy: false });
         throw err;
@@ -82,27 +117,31 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
     joinRoom: async (code: string, playerName: string) => {
       set({ isBusy: true, error: null });
       try {
-        const localId = `user_${Math.random().toString(36).substr(2, 9)}`;
-        await multiplayerService.joinRoom(code, playerName, localId);
-        
-        set({ 
-          roomCode: code, 
-          isHost: false, 
-          localPlayerId: localId,
-          isBusy: false 
+        const { playerId } = await multiplayerService.joinRoom(code, playerName);
+
+        set({
+          roomCode: code,
+          isHost: false,
+          localPlayerId: playerId,
+          isBusy: false,
         });
 
         unsubscribe = multiplayerService.listenToRoom(code, (room) => {
-          if (!room && get().currentRoom) {
-            set({ currentRoom: null, roomCode: null, error: 'Room was closed by host' });
-            if (unsubscribe) unsubscribe();
-          } else {
-            set({ currentRoom: room });
+          if (!room || room.status === 'closed') {
+            if (get().currentRoom) {
+              set({ currentRoom: null, roomCode: null, error: 'Room was closed' });
+              if (unsubscribe) unsubscribe();
+            }
+            return;
           }
+          set({
+            currentRoom: room,
+            isHost: room.hostId === get().localPlayerId,
+          });
+          maybeClaimHost(room);
         });
 
-        // Set presence
-        await gameSyncService.setPresence(code, localId);
+        await gameSyncService.setPresence(code, playerId);
       } catch (err: any) {
         set({ error: err.message, isBusy: false });
         throw err;
@@ -116,17 +155,27 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
       try {
         gameSyncService.stopHeartbeat(roomCode, localPlayerId);
         if (isHost) {
-          await gameSyncService.cleanupGameState(roomCode);
+          // Host explicitly closes — flag the room closed so peers exit cleanly.
+          // The Cloud Function sweeper GCs the actual node based on TTL.
           await multiplayerService.closeRoom(roomCode);
+          await gameSyncService.cleanupGameState(roomCode).catch(() => {});
         } else {
           await multiplayerService.leaveRoom(roomCode, localPlayerId);
         }
       } catch (e) {
-        console.error("Error leaving room", e);
+        console.warn('Multiplayer: leaveRoom error', (e as Error)?.message);
       } finally {
         get().unsubscribeAll();
         if (unsubscribe) unsubscribe();
-        set({ currentRoom: null, roomCode: null, localPlayerId: null, isHost: false, gameState: null, playerActions: {}, presence: {} });
+        set({
+          currentRoom: null,
+          roomCode: null,
+          localPlayerId: null,
+          isHost: false,
+          gameState: null,
+          playerActions: {},
+          presence: {},
+        });
       }
     },
 
@@ -148,8 +197,8 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
     },
 
     broadcastState: async (partialState: Partial<GameStatePayload>) => {
-      const { roomCode } = get();
-      if (!roomCode) return;
+      const { roomCode, isHost } = get();
+      if (!roomCode || !isHost) return;
       await gameSyncService.broadcastState(roomCode, partialState);
     },
 
@@ -164,8 +213,8 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
     },
 
     clearActions: async () => {
-      const { roomCode } = get();
-      if (!roomCode) return;
+      const { roomCode, isHost } = get();
+      if (!roomCode || !isHost) return;
       await gameSyncService.clearActions(roomCode);
     },
 
@@ -183,6 +232,8 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
 
       presenceUnsub = gameSyncService.listenToPresence(roomCode, (presence) => {
         set({ presence });
+        // Re-evaluate host migration whenever presence changes.
+        maybeClaimHost(get().currentRoom);
       });
     },
 
@@ -196,3 +247,5 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
   };
 });
 
+// Keep the auth import alive for tree-shakers; we use it indirectly via service.
+void auth;

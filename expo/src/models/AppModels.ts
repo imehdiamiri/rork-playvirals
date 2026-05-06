@@ -75,7 +75,8 @@ export const Games: Record<string, GameType> = {
     hasFreeTrial: false,
     isPremium: false,
     symbolName: 'stopwatch.fill', // SF: stopwatch.fill
-    supportedModes: [GameMode.singleDevice],
+    // Real multiplayer is implemented via useGameSync (host-authoritative reducer).
+    supportedModes: [GameMode.singleDevice, GameMode.multiDevice],
     roundDuration: 90,
     heroImageURL: 'https://r2-pub.rork.com/generated-images/d8092484-fefa-4921-9732-636c97a59a09.png',
   },
@@ -120,7 +121,9 @@ export const Games: Record<string, GameType> = {
     hasFreeTrial: false,
     isPremium: false,
     symbolName: 'square.grid.3x3.fill', // SF: square.grid.3x3.fill
-    supportedModes: [GameMode.singleDevice, GameMode.multiDevice, GameMode.teamMode],
+    // Real multiplayer only — team mode is not actually wired and was removed
+    // to stop advertising fake flows.
+    supportedModes: [GameMode.singleDevice, GameMode.multiDevice],
     roundDuration: 0,
     heroImageURL: 'https://r2-pub.rork.com/generated-images/630d9ac5-1895-4593-9ea2-7cd581f42ce6.png',
   },
@@ -135,7 +138,8 @@ export const Games: Record<string, GameType> = {
     hasFreeTrial: false,
     isPremium: true,
     symbolName: 'map.fill', // SF: map.fill
-    supportedModes: [GameMode.singleDevice, GameMode.multiDevice, GameMode.teamMode],
+    // Single-device only until proper multi-device sync ships.
+    supportedModes: [GameMode.singleDevice],
     roundDuration: 0,
     heroImageURL: 'https://r2-pub.rork.com/generated-images/8f997aac-f4e2-46f7-92d6-aa55f8b197ff.png',
   },
@@ -150,7 +154,8 @@ export const Games: Record<string, GameType> = {
     hasFreeTrial: false,
     isPremium: true,
     symbolName: 'number.square.fill', // SF: number.square.fill -> roughly 123
-    supportedModes: [GameMode.singleDevice, GameMode.multiDevice],
+    // Single-device only — multi-device sync not implemented for this game.
+    supportedModes: [GameMode.singleDevice],
     roundDuration: 0,
     heroImageURL: null,
   },
@@ -165,7 +170,8 @@ export const Games: Record<string, GameType> = {
     hasFreeTrial: false,
     isPremium: true,
     symbolName: 'paintpalette.fill', // SF: paintpalette.fill
-    supportedModes: [GameMode.singleDevice, GameMode.multiDevice],
+    // Single-device only — multi-device sync not implemented for this game.
+    supportedModes: [GameMode.singleDevice],
     roundDuration: 0,
     heroImageURL: null,
   },
@@ -210,7 +216,9 @@ export const Games: Record<string, GameType> = {
     hasFreeTrial: false,
     isPremium: true,
     symbolName: 'pencil.and.scribble', // SF: pencil.and.scribble
-    supportedModes: [GameMode.singleDevice, GameMode.multiDevice],
+    // Single-device only — the multi-device draft is not wired into useGameSync
+    // and was removed from supported modes to avoid dead lobby flows.
+    supportedModes: [GameMode.singleDevice],
     roundDuration: 100,
     heroImageURL: null,
   },

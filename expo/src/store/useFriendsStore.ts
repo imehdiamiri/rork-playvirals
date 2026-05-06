@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { rtdb as database } from '../lib/firebase';
+import { rtdb as database, functions } from '../lib/firebase';
 import { ref, get as fbGet, set as fbSet, push, update as fbUpdate } from 'firebase/database';
+import { httpsCallable } from 'firebase/functions';
 import { showToast } from '../components/ToastOverlay';
 
 /**
@@ -311,68 +312,34 @@ export const useFriendsStore = create<FriendsState>()(
 
       // ─── Invite System ───
 
-      generateInviteCode: async (userId: string) => {
+      // Invite code minting + redemption are server-authoritative now.
+      // Direct client wallet writes are rejected by RTDB rules.
+      generateInviteCode: async (_userId: string) => {
         try {
-          const userRef = ref(database, `users/${userId}/inviteCode`);
-          const snapshot = await fbGet(userRef);
-          if (snapshot.exists()) {
-            set({ inviteCode: snapshot.val() });
-          } else {
-            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-            await fbSet(userRef, code);
-            set({ inviteCode: code });
-          }
+          const fn = httpsCallable<{}, { code: string }>(functions, 'ensureInviteCode');
+          const res = await fn({});
+          if (res.data?.code) set({ inviteCode: res.data.code });
         } catch (e: any) {
-          console.warn('Invite: Generate failed', e);
+          console.warn('Invite: ensureInviteCode failed', e?.message);
         }
       },
 
-      redeemInviteCode: async (code: string, userId: string) => {
+      redeemInviteCode: async (code: string, _userId: string) => {
         const trimmed = code.trim().toUpperCase();
         if (!trimmed || get().isRedeemingInvite) return;
-        
+
         set({ isRedeemingInvite: true });
         try {
-          const usersRef = ref(database, 'users');
-          const snapshot = await fbGet(usersRef);
-          let inviterUserId: string | null = null;
-          
-          if (snapshot.exists()) {
-            for (const [uid, data] of Object.entries(snapshot.val() as Record<string, any>)) {
-              if (data.inviteCode === trimmed && uid !== userId) {
-                inviterUserId = uid;
-                break;
-              }
-            }
-          }
-          
-          if (!inviterUserId) {
-            showToast.warning("That code doesn't match any account.");
-            set({ isRedeemingInvite: false });
-            return;
-          }
-          
-          const rewardAmount = 10;
-          const inviterWalletRef = ref(database, `users/${inviterUserId}/wallet`);
-          const inviteeWalletRef = ref(database, `users/${userId}/wallet`);
-          
-          const [inviterSnap, inviteeSnap] = await Promise.all([
-            fbGet(inviterWalletRef),
-            fbGet(inviteeWalletRef),
-          ]);
-          
-          const inviterBalance = inviterSnap.exists() ? inviterSnap.val().balance || 0 : 0;
-          const inviteeBalance = inviteeSnap.exists() ? inviteeSnap.val().balance || 0 : 0;
-          
-          await Promise.all([
-            fbUpdate(inviterWalletRef, { balance: inviterBalance + rewardAmount, updatedAt: Date.now() }),
-            fbUpdate(inviteeWalletRef, { balance: inviteeBalance + rewardAmount, updatedAt: Date.now() }),
-          ]);
-          
-          showToast.success(`+${rewardAmount} Stars — Welcome bonus from your friend.`);
-          set({ isRedeemingInvite: false });
+          const fn = httpsCallable<{ code: string }, { credited: number }>(
+            functions,
+            'redeemInvite'
+          );
+          const res = await fn({ code: trimmed });
+          showToast.success(`+${res.data?.credited ?? 10} Stars — Welcome bonus from your friend.`);
         } catch (e: any) {
-          showToast.error(`Invite failed: ${e.message}`);
+          const msg = e?.message || 'Could not redeem invite code.';
+          showToast.error(msg);
+        } finally {
           set({ isRedeemingInvite: false });
         }
       },

@@ -1,32 +1,47 @@
-import { rtdb as database, auth } from '../lib/firebase';
-import { ref, get, update, query, orderByChild, equalTo, set } from 'firebase/database';
+import { rtdb as database, auth, functions } from '../lib/firebase';
+import { ref, get } from 'firebase/database';
+import { httpsCallable } from 'firebase/functions';
 
+/**
+ * InviteService — thin client wrapper around the server-authoritative invite
+ * Cloud Functions.
+ *
+ * All wallet credit + idempotency lives in `functions/index.js`:
+ *   - `ensureInviteCode`   — lazily mints (and caches) the user's invite code.
+ *   - `redeemInvite`       — atomically credits both sides exactly once.
+ *
+ * The client used to do the credit math itself, which the RTDB rules now
+ * (correctly) reject. Don't re-introduce direct wallet writes here.
+ */
 export class InviteService {
   static async getMyInviteCode(): Promise<string> {
     const uid = auth.currentUser?.uid;
     if (!uid) return '';
 
-    const userRef = ref(database, `users/${uid}/inviteCode`);
-    const snapshot = await get(userRef);
-    let code = snapshot.val();
+    // Read directly first — fastest path when the code already exists.
+    const snap = await get(ref(database, `users/${uid}/inviteCode`));
+    if (snap.exists()) return String(snap.val() || '');
 
-    if (!code) {
-      code = Math.random().toString(36).substring(2, 8).toUpperCase();
-      await set(userRef, code);
+    // Otherwise mint via Cloud Function (the only writer for inviteCode).
+    try {
+      const fn = httpsCallable<{}, { code: string }>(functions, 'ensureInviteCode');
+      const res = await fn({});
+      return res.data?.code || '';
+    } catch (e) {
+      console.warn('InviteService: ensureInviteCode failed', (e as Error)?.message);
+      return '';
     }
-    return code;
   }
 
   static async getInviteStats(): Promise<{ totalInvites: number; starsEarned: number }> {
     const uid = auth.currentUser?.uid;
     if (!uid) return { totalInvites: 0, starsEarned: 0 };
 
-    const statsRef = ref(database, `users/${uid}/inviteStats`);
-    const snapshot = await get(statsRef);
-    const val = snapshot.val() || {};
+    const snap = await get(ref(database, `users/${uid}/inviteStats`));
+    const v = snap.val() || {};
     return {
-      totalInvites: val.totalInvites || 0,
-      starsEarned: val.starsEarned || 0,
+      totalInvites: v.totalInvites || 0,
+      starsEarned: v.starsEarned || 0,
     };
   }
 
@@ -34,58 +49,11 @@ export class InviteService {
     const uid = auth.currentUser?.uid;
     if (!uid || !code.trim()) throw new Error('Invalid input');
 
-    const cleanCode = code.trim().toUpperCase();
-
-    // 1. Check if user already redeemed a code
-    const invitedByRef = ref(database, `users/${uid}/invitedBy`);
-    const checkSnap = await get(invitedByRef);
-    if (checkSnap.exists()) {
-      throw new Error('You have already redeemed an invite code.');
-    }
-
-    // 2. Find the referrer by code
-    const usersRef = ref(database, 'users');
-    const q = query(usersRef, orderByChild('inviteCode'), equalTo(cleanCode));
-    const snapshot = await get(q);
-
-    if (!snapshot.exists()) {
-      throw new Error('Invalid invite code.');
-    }
-
-    let referrerUid = '';
-    snapshot.forEach((child) => {
-      referrerUid = child.key as string;
-    });
-
-    if (referrerUid === uid) {
-      throw new Error('You cannot redeem your own invite code.');
-    }
-
-    // +10 stars for the new user
-    const myWalletRef = ref(database, `users/${uid}/wallet`);
-    const myWalletSnap = await get(myWalletRef);
-    const myBalance = (myWalletSnap.exists() ? myWalletSnap.val().balance || 0 : 0) + 10;
-
-    // +30 stars for the referrer
-    const refWalletRef = ref(database, `users/${referrerUid}/wallet`);
-    const refWalletSnap = await get(refWalletRef);
-    const refBalance = (refWalletSnap.exists() ? refWalletSnap.val().balance || 0 : 0) + 30;
-
-    const refStatsRef = ref(database, `users/${referrerUid}/inviteStats`);
-    const refStatsSnap = await get(refStatsRef);
-    const refStats = refStatsSnap.val() || { totalInvites: 0, starsEarned: 0 };
-
-    // 4. Update Database
-    const updates: any = {};
-    updates[`users/${uid}/invitedBy`] = referrerUid;
-    updates[`users/${uid}/wallet/balance`] = myBalance;
-    updates[`users/${uid}/wallet/updatedAt`] = Date.now();
-    updates[`users/${referrerUid}/wallet/balance`] = refBalance;
-    updates[`users/${referrerUid}/wallet/updatedAt`] = Date.now();
-    updates[`users/${referrerUid}/inviteStats/totalInvites`] = refStats.totalInvites + 1;
-    updates[`users/${referrerUid}/inviteStats/starsEarned`] = refStats.starsEarned + 30;
-
-    await update(ref(database), updates);
+    const fn = httpsCallable<{ code: string }, { credited: number }>(
+      functions,
+      'redeemInvite'
+    );
+    await fn({ code: code.trim().toUpperCase() });
     return true;
   }
 }

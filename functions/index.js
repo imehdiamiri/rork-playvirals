@@ -2,18 +2,23 @@
  * Firebase Cloud Functions — PartyBot secure backend layer.
  *
  * Functions:
- *   - generateCard:  Proxy to Gemini for AI card generation. Holds the key,
- *                    enforces rate limiting, and runs server-side moderation.
- *   - searchUsers:   Indexed prefix search over usernames (RTDB).
+ *   - generateCard:    Proxy to Gemini for AI card generation.
+ *   - claimDailyReward: Transactional once-per-day star reward.
+ *   - syncRevenueCat:  Pulls authoritative entitlement from RC and mirrors it.
+ *   - redeemInvite:    Server-authoritative invite redemption (+stars, idempotent).
+ *   - searchUsers:     Indexed prefix search over usernames.
+ *   - sweepStaleRooms: Scheduled GC of abandoned rooms (TTL based on lastActivityAt).
  *
  * Deploy:
  *   firebase deploy --only functions
  *
  * Set the Gemini key (one-time):
  *   firebase functions:secrets:set GEMINI_API_KEY
+ *   firebase functions:secrets:set REVENUECAT_SECRET
  */
 
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 
@@ -24,9 +29,10 @@ const REVENUECAT_SECRET = defineSecret('REVENUECAT_SECRET');
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const FREE_DAILY_LIMIT = 5;
 const DAILY_REWARD = 5;
+const INVITER_REWARD = 30;
+const INVITEE_REWARD = 10;
 
 // Star pack catalogue — keep in sync with App Store Connect / Play Console / RC.
-// productId → stars granted.
 const STAR_PACKS = {
   stars_50: 50,
   stars_200: 200,
@@ -36,6 +42,11 @@ const STAR_PACKS = {
 
 const PREMIUM_ENTITLEMENT = 'Premium';
 const LIFETIME_PRODUCT_IDS = ['lifetime', 'partybot_lifetime'];
+
+// Room TTLs (ms). Sweeper deletes anything past these thresholds.
+const ROOM_TTL_WAITING_MS = 30 * 60 * 1000;     // 30 min waiting → GC
+const ROOM_TTL_PLAYING_MS = 6 * 60 * 60 * 1000;  // 6h playing → GC
+const ROOM_TTL_CLOSED_MS  = 5 * 60 * 1000;       // 5 min closed → GC
 
 // ──────────────────────── Moderation ────────────────────────
 
@@ -76,11 +87,13 @@ exports.generateCard = onCall(
     if (typeof system !== 'string' || typeof user !== 'string') {
       throw new HttpsError('invalid-argument', 'system and user prompts are required.');
     }
+    if (system.length > 4000 || user.length > 2000) {
+      throw new HttpsError('invalid-argument', 'Prompt too large.');
+    }
     if (!isSafe(user)) {
       throw new HttpsError('failed-precondition', 'Prompt failed moderation.');
     }
 
-    // Check premium entitlement to bypass rate limit
     const userSnap = await admin.database().ref(`users/${uid}`).once('value');
     const isPremium = !!userSnap.val()?.isPremium;
     await bumpAndCheckUsage(uid, isPremium);
@@ -125,10 +138,7 @@ exports.claimDailyReward = onCall({ cors: true }, async (request) => {
 
   const result = await walletRef.transaction((current) => {
     const wallet = current || { balance: 0, lastDailyClaim: null, updatedAt: 0 };
-    if (wallet.lastDailyClaim === today) {
-      // Signal no-op via abort — we still want to surface the state.
-      return; // abort transaction
-    }
+    if (wallet.lastDailyClaim === today) return; // abort
     wallet.balance = (wallet.balance || 0) + DAILY_REWARD;
     wallet.lastDailyClaim = today;
     wallet.updatedAt = Date.now();
@@ -146,14 +156,111 @@ exports.claimDailyReward = onCall({ cors: true }, async (request) => {
   };
 });
 
-// ──────────────────────── syncRevenueCat ────────────────────────
+// ──────────────────────── redeemInvite ────────────────────────
 
 /**
- * Pull the authoritative subscriber state from RevenueCat using the server
- * secret, then mirror it onto users/$uid: isPremium, isLifetime, and credit
- * any newly delivered star packs into wallet.balance. Idempotent via
- * users/$uid/processedTransactions/{transactionId}.
+ * Server-authoritative invite redemption. Replaces the unsafe client-side
+ * wallet writes that were rejected by RTDB rules anyway.
+ *
+ * Atomicity: each side is bumped via a `wallet` transaction so concurrent
+ * redemptions can't lose updates. Idempotency: invitee's `invitedBy` field
+ * is rules-protected (server-only) so it can only be set here, and it's the
+ * gate that prevents double-claims.
  */
+exports.redeemInvite = onCall({ cors: true }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+
+  const raw = String(request.data?.code || '').trim().toUpperCase();
+  if (!raw || raw.length < 4 || raw.length > 12) {
+    throw new HttpsError('invalid-argument', 'Invalid invite code.');
+  }
+
+  // Already redeemed?
+  const invitedBySnap = await admin.database().ref(`users/${uid}/invitedBy`).once('value');
+  if (invitedBySnap.exists()) {
+    throw new HttpsError('failed-precondition', 'You already redeemed an invite code.');
+  }
+
+  // Find inviter by indexed code.
+  const lookup = await admin
+    .database()
+    .ref('users')
+    .orderByChild('inviteCode')
+    .equalTo(raw)
+    .limitToFirst(1)
+    .once('value');
+
+  if (!lookup.exists()) {
+    throw new HttpsError('not-found', 'Invalid invite code.');
+  }
+
+  let inviterUid = null;
+  lookup.forEach((c) => { inviterUid = c.key; });
+  if (!inviterUid || inviterUid === uid) {
+    throw new HttpsError('failed-precondition', 'You cannot redeem your own code.');
+  }
+
+  const now = Date.now();
+
+  // 1. Mark invitee — this is the single point of idempotency.
+  const inviteeMark = await admin
+    .database()
+    .ref(`users/${uid}/invitedBy`)
+    .transaction((cur) => (cur ? undefined : inviterUid));
+  if (!inviteeMark.committed) {
+    throw new HttpsError('failed-precondition', 'You already redeemed an invite code.');
+  }
+
+  // 2. Credit invitee.
+  await admin.database().ref(`users/${uid}/wallet`).transaction((w) => {
+    const wallet = w || { balance: 0, updatedAt: 0 };
+    wallet.balance = (wallet.balance || 0) + INVITEE_REWARD;
+    wallet.updatedAt = now;
+    return wallet;
+  });
+
+  // 3. Credit inviter + bump stats.
+  await admin.database().ref(`users/${inviterUid}/wallet`).transaction((w) => {
+    const wallet = w || { balance: 0, updatedAt: 0 };
+    wallet.balance = (wallet.balance || 0) + INVITER_REWARD;
+    wallet.updatedAt = now;
+    return wallet;
+  });
+  await admin.database().ref(`users/${inviterUid}/inviteStats`).transaction((s) => {
+    const stats = s || { totalInvites: 0, starsEarned: 0 };
+    stats.totalInvites = (stats.totalInvites || 0) + 1;
+    stats.starsEarned = (stats.starsEarned || 0) + INVITER_REWARD;
+    return stats;
+  });
+
+  return { credited: INVITEE_REWARD, inviterCredited: INVITER_REWARD };
+});
+
+// ──────────────────────── ensureInviteCode ────────────────────────
+
+/**
+ * Lazily mint a stable invite code for the caller. RTDB rules forbid the
+ * client from writing this directly so every "show my invite code" path
+ * funnels through here.
+ */
+exports.ensureInviteCode = onCall({ cors: true }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+
+  const ref = admin.database().ref(`users/${uid}/inviteCode`);
+  const snap = await ref.once('value');
+  if (snap.exists()) return { code: snap.val() };
+
+  // 6-char base36 — collision odds are negligible at our scale; if we ever
+  // worry, retry on collision via transaction.
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+  await ref.set(code);
+  return { code };
+});
+
+// ──────────────────────── syncRevenueCat ────────────────────────
+
 exports.syncRevenueCat = onCall(
   { secrets: [REVENUECAT_SECRET], cors: true },
   async (request) => {
@@ -162,8 +269,6 @@ exports.syncRevenueCat = onCall(
 
     const secret = REVENUECAT_SECRET.value();
     if (!secret) {
-      // No RC secret configured — leave entitlements as-is. This keeps dev
-      // builds (no IAP) functional without throwing on every paywall mount.
       return { isPremium: false, isLifetime: false, credited: 0, skipped: true };
     }
 
@@ -192,7 +297,6 @@ exports.syncRevenueCat = onCall(
         ? true
         : Object.keys(nonSubs).some((pid) => LIFETIME_PRODUCT_IDS.includes(pid));
 
-    // Idempotent star pack delivery.
     const processedRef = admin.database().ref(`users/${uid}/processedTransactions`);
     const processedSnap = await processedRef.once('value');
     const processed = processedSnap.val() || {};
@@ -240,8 +344,6 @@ exports.searchUsers = onCall({ cors: true }, async (request) => {
   const query = String(request.data?.query || '').trim().toLowerCase();
   if (query.length < 2) return { results: [] };
 
-  // Prefix search via usernameLower index. Requires:
-  //   "users": { ".indexOn": ["usernameLower"] }   (in database.rules.json)
   const snap = await admin
     .database()
     .ref('users')
@@ -258,9 +360,46 @@ exports.searchUsers = onCall({ cors: true }, async (request) => {
     results.push({
       id: child.key,
       username: v.username || '',
-      email: v.email || undefined,
       avatarURL: v.avatarURL || undefined,
     });
   });
   return { results };
+});
+
+// ──────────────────────── sweepStaleRooms ────────────────────────
+
+/**
+ * Garbage-collect abandoned rooms. Replaces the destructive
+ * `onDisconnect(roomRef).remove()` we used to hang off the host: a brief
+ * host disconnect now leaves the room intact and either the host reconnects
+ * or another player promotes via host migration. The sweeper only deletes
+ * rooms that have actually gone silent past their TTL.
+ */
+exports.sweepStaleRooms = onSchedule('every 10 minutes', async () => {
+  const now = Date.now();
+  const roomsRef = admin.database().ref('rooms');
+  const snap = await roomsRef.once('value');
+  if (!snap.exists()) return;
+
+  const updates = {};
+  let removed = 0;
+  snap.forEach((child) => {
+    const room = child.val() || {};
+    const last = room.lastActivityAt || room.createdAt || 0;
+    const status = room.status || 'waiting';
+
+    let ttl = ROOM_TTL_WAITING_MS;
+    if (status === 'playing') ttl = ROOM_TTL_PLAYING_MS;
+    else if (status === 'closed') ttl = ROOM_TTL_CLOSED_MS;
+
+    if (now - last > ttl) {
+      updates[child.key] = null;
+      removed++;
+    }
+  });
+
+  if (Object.keys(updates).length > 0) {
+    await roomsRef.update(updates);
+  }
+  console.log(`sweepStaleRooms: removed ${removed} room(s).`);
 });

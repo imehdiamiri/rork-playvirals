@@ -1,9 +1,6 @@
 export const AppConstants = {
-  Firebase: {
-    projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'partyplay-8',
-    appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '1:1003126250476:web:6914df967838f18ffa7ec9',
-    databaseURL: process.env.EXPO_PUBLIC_FIREBASE_DATABASE_URL || 'https://partyplay-8-default-rtdb.firebaseio.com',
-  },
+  // Firebase config is read directly from EXPO_PUBLIC_FIREBASE_* in src/lib/firebase.ts.
+  // Do not duplicate or fall back here — see firebase.ts for the source of truth.
   URLs: {
     privacyPolicy: 'https://www.playvirals.com/privacy.html',
     termsOfService: 'https://www.playvirals.com/terms.html',
@@ -17,9 +14,9 @@ export const AppConstants = {
     apiKeyIOS: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS || '',
     apiKeyAndroid: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID || '',
   },
-  Gemini: {
-    apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY || '',
-  },
+  // NOTE: The Gemini API key is intentionally NOT bundled into the client.
+  // All AI requests proxy through the `generateCard` Cloud Function which
+  // owns the secret. Do not add EXPO_PUBLIC_GEMINI_API_KEY back here.
   Economy: {
     dailyReward: 5,
     inviteReward: 10,
