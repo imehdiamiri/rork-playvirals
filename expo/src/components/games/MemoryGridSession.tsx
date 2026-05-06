@@ -62,6 +62,7 @@ function shuffleArray<T>(arr: T[]): T[] {
 }
 
 import { useGameSync } from '@/src/hooks/useGameSync';
+import { ResultsScoreboard, RankEntry } from './ResultsScoreboard';
 
 // Animated tile wrapper with 3D flip effect matching iOS rotation3DEffect
 function FlipTile({ isFlipped, isMatched, color, symbol, size, onPress, disabled, index }: {
@@ -502,43 +503,23 @@ export function MemoryGridSession({ session }: Props) {
     return aTime - bTime;
   });
 
+  const entries: RankEntry[] = sorted.map((player) => {
+    const result = playerTimes.find(t => t.playerId === player.id);
+    return {
+      id: player.id,
+      name: player.displayName,
+      primary: result ? formatTime(result.elapsedSeconds) : '—',
+      secondary: result ? `${result.moveCount} moves` : undefined,
+    };
+  });
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.resultsContent}>
-        <View style={styles.trophyHeader}>
-          <IconSymbol name="trophy.fill" size={44} color={Colors.yellow} />
-          <Text style={styles.trophyTitle}>
-            {players.length > 1 ? 'Final Rankings' : 'Complete!'}
-          </Text>
-        </View>
-
-        <View style={styles.rankingList}>
-          {sorted.map((player, index) => {
-            const result = playerTimes.find(t => t.playerId === player.id);
-            return (
-              <View
-                key={player.id}
-                style={[
-                  styles.rankRow,
-                  index === 0 && styles.rankRowFirst,
-                ]}
-              >
-                <View style={[styles.rankCircle, index === 0 && styles.rankCircleFirst]}>
-                  <Text style={[styles.rankNumber, index === 0 && { color: Colors.yellow }]}>
-                    {index + 1}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rankName}>{player.displayName}</Text>
-                  <Text style={styles.rankDetail}>
-                    {result ? `${formatTime(result.elapsedSeconds)} · ${result.moveCount} moves` : '—'}
-                  </Text>
-                </View>
-                {index === 0 && <IconSymbol name="crown.fill" size={18} color={Colors.yellow} />}
-              </View>
-            );
-          })}
-        </View>
+        <ResultsScoreboard
+          entries={entries}
+          title={players.length > 1 ? 'Final Rankings' : 'Complete!'}
+        />
 
         <Pressable style={styles.primaryBtn} onPress={handlePlayAgain}>
           <Text style={styles.primaryBtnText}>Play Again</Text>
@@ -616,25 +597,4 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: 'rgba(90,200,250,0.4)',
   },
 
-  // Results
-  trophyHeader: { alignItems: 'center', gap: 8, paddingTop: 20, marginBottom: 20 },
-  trophyTitle: { color: 'white', fontSize: 22, fontWeight: 'bold' },
-  rankingList: { gap: 10, marginBottom: 24 },
-  rankRow: {
-    flexDirection: 'row', alignItems: 'center', padding: 12, gap: 12,
-    backgroundColor: 'rgba(255,255,255,0.035)', borderRadius: 14,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)',
-  },
-  rankRowFirst: {
-    backgroundColor: 'rgba(255,204,0,0.06)',
-    borderColor: 'rgba(255,204,0,0.2)',
-  },
-  rankCircle: {
-    width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  rankCircleFirst: { backgroundColor: 'rgba(255,204,0,0.2)' },
-  rankNumber: { color: 'rgba(255,255,255,0.5)', fontSize: 17, fontWeight: 'bold' },
-  rankName: { color: 'white', fontSize: 15, fontWeight: '600' },
-  rankDetail: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 2 },
 });

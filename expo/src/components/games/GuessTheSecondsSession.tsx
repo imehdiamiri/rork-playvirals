@@ -5,6 +5,7 @@ import { GameSession } from '@/src/store/useGameStore';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useGameSync } from '@/src/hooks/useGameSync';
 import { useMultiplayerStore } from '@/src/store/useMultiplayerStore';
+import { ResultsScoreboard, RankEntry } from './ResultsScoreboard';
 
 // Platform-safe haptics
 let Haptics: any = null;
@@ -423,25 +424,16 @@ export function GuessTheSecondsSession({ session }: Props) {
       {/* Final Ranking Card */}
       {isFinished && (
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Final Results</Text>
-          <Text style={styles.sectionSubtitle}>Lowest total difference wins.</Text>
-
-          <View style={styles.rankingList}>
-            {playerScores.map((rank, idx) => (
-              <View key={rank.player} style={[styles.rankRow, idx === 0 && styles.winnerRow]}>
-                <View style={[styles.rankBadge, idx === 0 && styles.winnerBadge]}>
-                  <Text style={[styles.rankBadgeText, idx === 0 && styles.winnerBadgeText]}>#{idx + 1}</Text>
-                </View>
-                <View style={{flex: 1}}>
-                  <Text style={styles.rankName}>{rank.player}</Text>
-                  <Text style={styles.rankAvg}>Avg {rank.avg.toFixed(2)}</Text>
-                </View>
-                <Text style={[styles.rankTotal, idx === 0 && styles.winnerTotal]}>
-                  {rank.total.toFixed(2)}
-                </Text>
-              </View>
-            ))}
-          </View>
+          <ResultsScoreboard
+            title="Final Results"
+            subtitle="Lowest total difference wins."
+            entries={playerScores.map<RankEntry>((rank) => ({
+              id: rank.player,
+              name: rank.player,
+              primary: rank.total.toFixed(2),
+              secondary: `Avg ${rank.avg.toFixed(2)}`,
+            }))}
+          />
 
           <Pressable
             style={[
@@ -525,22 +517,4 @@ const styles = StyleSheet.create({
   scoreRow: { flexDirection: 'row', paddingVertical: 10, paddingHorizontal: 4, borderRadius: 10 },
   scoreRowActive: { backgroundColor: 'rgba(10, 132, 255, 0.12)' },
   scoreCell: { flex: 1, color: 'white', fontSize: 14, textAlign: 'center', fontVariant: ['tabular-nums'] },
-  rankingList: { gap: 10, marginTop: 10 },
-  rankRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: 'rgba(255,255,255,0.04)', padding: 12, borderRadius: 16,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
-  },
-  winnerRow: { backgroundColor: 'rgba(52, 199, 89, 0.12)', borderColor: 'rgba(52, 199, 89, 0.2)' },
-  rankBadge: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center',
-  },
-  winnerBadge: { backgroundColor: 'rgba(255, 214, 10, 0.22)' },
-  rankBadgeText: { color: 'white', fontWeight: 'bold' },
-  winnerBadgeText: { color: Colors.yellow },
-  rankName: { color: 'white', fontSize: 16, fontWeight: 'bold' },
-  rankAvg: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 2 },
-  rankTotal: { color: 'white', fontSize: 20, fontWeight: 'bold' },
-  winnerTotal: { color: Colors.green },
 });

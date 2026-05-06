@@ -4,6 +4,16 @@ import { View, Text, StyleSheet, Animated, PanResponder, Dimensions, Pressable, 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { CardCategory, CardCategoryInfo, ALL_CARDS, PartyCard } from '@/src/models/CardModels';
 
+// One-time index by category so we don't scan all 800+ cards on every filter change.
+const CARDS_BY_CATEGORY: Record<string, PartyCard[]> = (() => {
+  const out: Record<string, PartyCard[]> = {};
+  for (const card of ALL_CARDS) {
+    if (!out[card.category]) out[card.category] = [];
+    out[card.category].push(card);
+  }
+  return out;
+})();
+
 let BlurView: any = null;
 if (Platform.OS === 'ios') {
   try { BlurView = require('expo-blur').BlurView; } catch {}
@@ -23,28 +33,26 @@ export function CardsDeckRenderer({ categoryId }: Props) {
   const [selectedSubtype, setSelectedSubtype] = useState<string | null>(null);
   const [savedCards, setSavedCards] = useState<Set<string>>(new Set());
 
-  const availableSubtypes = useMemo(
-    () => Array.from(new Set(ALL_CARDS.filter(c => c.category === categoryId).map(c => c.subtype))),
-    [categoryId]
-  );
+  const categoryCards = useMemo(() => CARDS_BY_CATEGORY[categoryId] ?? [], [categoryId]);
 
-  const getFilteredCards = (): PartyCard[] => {
-    let cards = ALL_CARDS.filter(c => c.category === categoryId);
-    if (!includeSpicy) cards = cards.filter(c => !c.isSpicy);
-    if (selectedSubtype) cards = cards.filter(c => c.subtype === selectedSubtype);
-    return cards.sort(() => Math.random() - 0.5);
-  };
+  const availableSubtypes = useMemo(
+    () => Array.from(new Set(categoryCards.map(c => c.subtype))),
+    [categoryCards]
+  );
 
   const [deck, setDeck] = useState<PartyCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const deckLengthRef = useRef<number>(0);
 
   useEffect(() => {
-    const next = getFilteredCards();
+    let cards = categoryCards;
+    if (!includeSpicy) cards = cards.filter(c => !c.isSpicy);
+    if (selectedSubtype) cards = cards.filter(c => c.subtype === selectedSubtype);
+    const next = [...cards].sort(() => Math.random() - 0.5);
     setDeck(next);
     deckLengthRef.current = next.length;
     setCurrentIndex(0);
-  }, [categoryId, includeSpicy, selectedSubtype]);
+  }, [categoryCards, includeSpicy, selectedSubtype]);
 
   const position = useRef(new Animated.ValueXY()).current;
 

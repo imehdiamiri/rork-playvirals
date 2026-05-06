@@ -1,12 +1,13 @@
 import { Colors } from '@/src/theme/Colors';
 import { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, ActivityIndicator, Share } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppBackgroundView } from '@/src/components/AppBackgroundView';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Games } from '@/src/models/AppModels';
 import { useMultiplayerStore } from '@/src/store/useMultiplayerStore';
+import { multiplayerService } from '@/src/services/MultiplayerService';
 import * as Clipboard from 'expo-clipboard';
 
 export default function LobbyScreen() {
@@ -42,6 +43,29 @@ export default function LobbyScreen() {
       await Clipboard.setStringAsync(roomCode);
       Alert.alert('Copied', 'Room code copied to clipboard!');
     }
+  };
+
+  const handleShare = async () => {
+    if (!roomCode) return;
+    try {
+      await Share.share({
+        message: `Join my PartyBot game! Room code: ${roomCode}`,
+      });
+    } catch (e) {
+      console.log('share cancelled', e);
+    }
+  };
+
+  const handleKick = (playerId: string, name: string) => {
+    if (!isHost || !roomCode) return;
+    Alert.alert('Remove Player?', `Remove ${name} from the room?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => { multiplayerService.leaveRoom(roomCode, playerId).catch(() => {}); },
+      },
+    ]);
   };
 
   const handleStartGame = async () => {
@@ -107,7 +131,7 @@ export default function LobbyScreen() {
                 <Text style={styles.actionButtonText}>Copy</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#007AFF' }]}>
+              <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#007AFF' }]} onPress={handleShare}>
                 <IconSymbol name="square.and.arrow.up" size={14} color="white" />
                 <Text style={styles.actionButtonText}>Share</Text>
               </TouchableOpacity>
@@ -157,7 +181,7 @@ export default function LobbyScreen() {
                     <IconSymbol name="person.fill" size={16} color="white" />
                   </View>
                   <Text style={styles.playerName}>
-                    {player.name} {player.id === localPlayerId ? '(You)' : ''}
+                    {player.displayName} {player.id === localPlayerId ? '(You)' : ''}
                   </Text>
                 </View>
                 
@@ -169,7 +193,7 @@ export default function LobbyScreen() {
                 )}
                 
                 {isHost && player.id !== localPlayerId && (
-                  <TouchableOpacity style={styles.kickButton}>
+                  <TouchableOpacity style={styles.kickButton} onPress={() => handleKick(player.id, player.displayName)}>
                     <Text style={styles.kickText}>Remove</Text>
                   </TouchableOpacity>
                 )}

@@ -49,12 +49,24 @@
 - [x] `GuessTheSecondsSession` rewritten as a single sync object driven through `useGameSync`. Host owns the reducer (`setTarget`/`start`/`stop`/`continue`/`playAgain`); clients dispatch via `sendAction`. `startedAt` is broadcast as an epoch ms so each device computes its own smooth `elapsedTime` locally without re-broadcasting every tick. Non-active players see a "Waiting for X…" hint and have controls disabled.
 - [x] `Pass & Guess` left as **single-device by design** — the entire game loop is built around privacy screens and physically passing one phone, so multi-device mode is intentionally not in `supportedModes`. Documented here so future contributors don't try to wire it.
 
-## Phase 8 — Reusable primitives (started)
-- [x] Added `expo/src/components/games/ResultsScoreboard.tsx` — shared sorted ranking with winner highlight, used by Pass & Guess final screen. Memory Grid + Guess the Seconds final cards can migrate to it incrementally without UI regression.
+## Phase 8 — Reusable primitives
+- [x] Added `expo/src/components/games/ResultsScoreboard.tsx` — shared sorted ranking with winner highlight, used by Pass & Guess final screen.
+- [x] Migrated `MemoryGridSession` final ranking card to `ResultsScoreboard` (time + move count). Removed ~20 lines of duplicated rank-row styles.
+- [x] Migrated `GuessTheSecondsSession` final ranking card to `ResultsScoreboard` (total + avg). Removed ~18 lines of duplicated styles.
+
+## Phase 9 — Lobby / Team Setup / Friends finishing pass
+- [x] `lobby/[roomCode].tsx` — wired the previously-decorative Share button to `Share.share` with the room code, wired the Remove button to `multiplayerService.leaveRoom(roomCode, playerId)` behind a confirmation alert, and fixed `player.name` → `player.displayName` (was rendering `undefined` after the Player model unification).
+- [x] `team-setup.tsx` — `handleStart` now actually calls `useMultiplayerStore.startGame()` and navigates to `/game/[id]/session`. Player name read fixed to `displayName`.
+- [x] `(tabs)/friends.tsx` — "Invite" pill on online friends now triggers `Share.share` instead of being a dead button.
+
+## Phase 7 — Performance (incremental)
+- [x] `CardsDeckRenderer` — built a one-time `CARDS_BY_CATEGORY` index (888 cards) at module load so category filter changes no longer re-scan the whole deck. Memoized `categoryCards`/`availableSubtypes` so subtype/spicy toggles only re-filter the per-category slice.
+
+## Validation
+- [x] runChecks passes after Phase 7 / 8 / 9 changes.
 
 ## Follow-ups (next sessions)
 - Phase 2 — admin website migration to Firebase Admin SDK (still on Supabase).
-- Phase 7 — animation engine consolidation, low-end Android profiling, lazy load card decks.
-- Phase 8 — migrate Memory Grid + Guess the Seconds final ranking cards to `ResultsScoreboard`; extract a shared `RoundHeader` and `SetupCard` primitive next.
-- Phase 9 — Team Setup + Lobby + Friends Rooms tab finishing pass.
+- Phase 7 — animation engine consolidation (`Animated` → Reanimated), low-end Android profiling, lazy-load card decks behind `React.lazy` on the cards route.
+- Phase 8 — extract a shared `RoundHeader` and `SetupCard` primitive once 2+ games actually need them.
 - Set RC server secret: `firebase functions:secrets:set REVENUECAT_SECRET` and deploy updated `database.rules.json` (`firebase deploy --only database`).

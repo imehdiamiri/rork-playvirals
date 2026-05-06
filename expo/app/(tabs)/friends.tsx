@@ -389,7 +389,7 @@ export default function FriendsScreen() {
                         <Avatar title={friend.name} isOnline={friend.isOnline} size={30} />
                         <Text style={styles.friendName} numberOfLines={1}>{friend.name}</Text>
                         <View style={{ flex: 1 }} />
-                        <TouchableOpacity style={styles.invitePillButton}>
+                        <TouchableOpacity style={styles.invitePillButton} onPress={handleShareInvite}>
                           <Text style={styles.invitePillButtonText}>Invite</Text>
                         </TouchableOpacity>
                       </View>

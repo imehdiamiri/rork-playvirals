@@ -51,7 +51,7 @@ export default function TeamSetupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ gameId?: string; roomCode?: string }>();
-  const { currentRoom, isHost, roomCode: storeRoomCode } = useMultiplayerStore();
+  const { currentRoom, isHost, roomCode: storeRoomCode, startGame } = useMultiplayerStore();
 
   const [isBusy, setIsBusy] = useState(false);
   const roomCode = params.roomCode || storeRoomCode || '------';
@@ -62,7 +62,7 @@ export default function TeamSetupScreen() {
   const [players, setPlayers] = useState<TeamPlayer[]>(() =>
     Object.entries(roomPlayers).map(([id, p]: [string, any]) => ({
       id,
-      displayName: p.name || `Player`,
+      displayName: p.displayName || p.name || `Player`,
       isConnected: p.connected !== false,
       teamId: null,
     }))
@@ -118,10 +118,18 @@ export default function TeamSetupScreen() {
     );
   };
 
-  const handleStart = () => {
-    if (!canStart) return;
-    showToast.success('Team match starting!');
-    // In production: casualVM.startGame() → navigate to session
+  const handleStart = async () => {
+    if (!canStart || !currentRoom) return;
+    setIsBusy(true);
+    try {
+      await startGame();
+      showToast.success('Team match starting!');
+      router.replace(`/game/${currentRoom.gameId}/session` as any);
+    } catch (e: any) {
+      showToast.error(e?.message ?? 'Failed to start');
+    } finally {
+      setIsBusy(false);
+    }
   };
 
   const copyRoomCode = async () => {
