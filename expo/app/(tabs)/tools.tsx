@@ -115,7 +115,6 @@ export default function ToolsScreen() {
             </View>
           </View>
         </View>
-        </View>
       </ScrollView>
     </View>
   );
