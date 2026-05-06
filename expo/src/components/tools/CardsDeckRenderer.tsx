@@ -37,29 +37,39 @@ export function CardsDeckRenderer({ categoryId }: Props) {
 
   const [deck, setDeck] = useState<PartyCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const deckLengthRef = useRef<number>(0);
 
   useEffect(() => {
-    setDeck(getFilteredCards());
+    const next = getFilteredCards();
+    setDeck(next);
+    deckLengthRef.current = next.length;
     setCurrentIndex(0);
   }, [categoryId, includeSpicy, selectedSubtype]);
 
   const position = useRef(new Animated.ValueXY()).current;
 
+  const forceSwipeRef = useRef<(direction: 'left' | 'right') => void>(() => {});
+  const resetPositionRef = useRef<() => void>(() => {});
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 4 || Math.abs(g.dy) > 4,
       onPanResponderMove: (_event, gesture) => {
         position.setValue({ x: gesture.dx, y: gesture.dy });
       },
       onPanResponderRelease: (_event, gesture) => {
         if (gesture.dx > SWIPE_THRESHOLD) {
-          forceSwipe('right');
+          forceSwipeRef.current('right');
         } else if (gesture.dx < -SWIPE_THRESHOLD) {
-          forceSwipe('left');
+          forceSwipeRef.current('left');
         } else {
-          resetPosition();
+          resetPositionRef.current();
         }
-      }
+      },
+      onPanResponderTerminate: () => {
+        resetPositionRef.current();
+      },
     })
   ).current;
 
@@ -74,12 +84,15 @@ export function CardsDeckRenderer({ categoryId }: Props) {
 
   const onSwipeComplete = (direction: 'left' | 'right') => {
     if (direction === 'left') {
-      setCurrentIndex(prev => Math.min(prev + 1, deck.length));
+      setCurrentIndex(prev => Math.min(prev + 1, deckLengthRef.current));
     } else {
       setCurrentIndex(prev => Math.max(prev - 1, 0));
     }
     position.setValue({ x: 0, y: 0 });
   };
+
+  forceSwipeRef.current = forceSwipe;
+  resetPositionRef.current = resetPosition;
 
   const handleShuffle = () => {
     setDeck([...deck].sort(() => Math.random() - 0.5));

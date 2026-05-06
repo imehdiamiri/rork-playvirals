@@ -66,37 +66,6 @@ export default function ToolsScreen() {
           </View>
 
           <View style={styles.cardsList}>
-            {/* AI Generate Row */}
-            <TouchableOpacity style={styles.rowContainer} activeOpacity={0.8}>
-              {Platform.OS === 'ios' && BlurView ? (
-                <BlurView intensity={25} tint="dark" style={styles.aiGenerateRow}>
-                  <LinearGradient colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.01)']} style={styles.aiGenerateBackground}>
-                    <View style={[styles.categoryIconContainer, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
-                      <IconSymbol name="wand.and.stars" size={18} color="white" />
-                    </View>
-                    <View style={styles.categoryTextContainer}>
-                      <Text style={styles.categoryTitle}>AI Generator</Text>
-                      <Text style={styles.categorySubtitle}>Create custom prompts</Text>
-                    </View>
-                    <IconSymbol name="chevron.right" size={16} color="rgba(255,255,255,0.3)" />
-                  </LinearGradient>
-                </BlurView>
-              ) : (
-                <View style={[styles.aiGenerateRow, { backgroundColor: 'rgba(20,20,30,0.92)' }]}>
-                  <LinearGradient colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.01)']} style={styles.aiGenerateBackground}>
-                    <View style={[styles.categoryIconContainer, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
-                      <IconSymbol name="wand.and.stars" size={18} color="white" />
-                    </View>
-                    <View style={styles.categoryTextContainer}>
-                      <Text style={styles.categoryTitle}>AI Generator</Text>
-                      <Text style={styles.categorySubtitle}>Create custom prompts</Text>
-                    </View>
-                    <IconSymbol name="chevron.right" size={16} color="rgba(255,255,255,0.3)" />
-                  </LinearGradient>
-                </View>
-              )}
-            </TouchableOpacity>
-
             {/* Categories */}
             <View style={styles.categoriesContainer}>
               {CardCategoriesList.map((category) => (
@@ -220,18 +189,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 6,
-  },
-  aiGenerateRow: {
-    borderRadius: 18,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  aiGenerateBackground: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    gap: 16,
   },
   categoriesContainer: {
     gap: 8,
