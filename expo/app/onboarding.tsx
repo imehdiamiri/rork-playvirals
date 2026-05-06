@@ -41,9 +41,9 @@ const PAGES = [0, 1, 2, 3] as const;
 type PageIndex = 0 | 1 | 2 | 3;
 
 const ART = {
-  bored: 'https://r2-pub.rork.com/generated-images/734a0866-d6bf-466b-a59f-75699c1277b8.png',
-  party: 'https://r2-pub.rork.com/generated-images/f4003ed7-4d05-4f0c-a05e-3de56339e939.png',
-  pass: 'https://r2-pub.rork.com/generated-images/36215853-9ffb-45c9-a918-a39a66058838.png',
+  bored: 'https://r2-pub.rork.com/generated-images/020c5154-1e27-47e9-87ab-c7ffcb75230d.png',
+  party: 'https://r2-pub.rork.com/generated-images/fec29f95-8f3b-40cf-ac76-8cdfe1695d74.png',
+  pass: 'https://r2-pub.rork.com/generated-images/7ff867e4-3755-42b0-a99b-386494b64e99.png',
   hero: 'https://r2-pub.rork.com/generated-images/ec6d76b0-e20d-4a63-8ace-1e1379180c90.png',
 } as const;
 
