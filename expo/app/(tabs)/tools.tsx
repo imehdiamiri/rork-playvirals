@@ -50,18 +50,26 @@ export default function ToolsScreen() {
         {/* Tools Section */}
         <PartyToolsSection showsHeader={false} />
 
-        {/* Cards Section */}
-        <View style={styles.cardsSection}>
+        {/* Cards Section — distinct container */}
+        <View style={styles.cardsSectionWrapper}>
+          <LinearGradient
+            colors={['rgba(255,90,140,0.10)', 'rgba(120,80,255,0.06)', 'rgba(255,255,255,0.02)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.cardsSectionBorder} pointerEvents="none" />
+
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionHeaderTextContainer}>
+            <View style={styles.sectionTitleRow}>
+              <View style={styles.titleIconBadge}>
+                <IconSymbol name="rectangle.fill.on.rectangle.angled.fill" size={14} color="#FF5A8C" weight="bold" />
+              </View>
               <Text style={styles.sectionTitle}>Ready to Use Cards</Text>
             </View>
             <View style={{ flex: 1 }} />
-            <View style={styles.sectionTrailing}>
-              <View style={styles.totalBadge}>
-                <Text style={styles.totalBadgeText}>{totalCardsCount}</Text>
-              </View>
-              <IconSymbol name="rectangle.fill.on.rectangle.angled.fill" size={12} color="rgba(255,255,255,0.5)" />
+            <View style={styles.totalBadge}>
+              <Text style={styles.totalBadgeText}>{totalCardsCount}</Text>
             </View>
           </View>
 
@@ -107,6 +115,7 @@ export default function ToolsScreen() {
             </View>
           </View>
         </View>
+        </View>
       </ScrollView>
     </View>
   );
@@ -146,26 +155,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardsSection: {
+  cardsSectionWrapper: {
+    marginTop: 4,
+    padding: 14,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.02)',
     gap: 14,
+  },
+  cardsSectionBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
   },
   sectionHeader: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     gap: 8,
   },
-  sectionHeaderTextContainer: {
-    gap: 2,
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  titleIconBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,90,140,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,90,140,0.25)',
   },
   sectionTitle: {
     fontFamily: 'Viral-Black',
     fontSize: 16,
     color: 'white',
-  },
-  sectionTrailing: {
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-    gap: 4,
   },
   totalBadge: {
     backgroundColor: 'rgba(255,255,255,0.08)',
