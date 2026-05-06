@@ -41,10 +41,10 @@ const PAGES = [0, 1, 2, 3] as const;
 type PageIndex = 0 | 1 | 2 | 3;
 
 const ART = {
-  bored: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/gyy4cw0q1z7hha68b3m2o.png',
-  party: 'https://r2-pub.rork.com/generated-images/58eb863e-a8bb-4e45-a5e0-313428ca4ef2.png',
-  portrait: 'https://r2-pub.rork.com/generated-images/47f129bf-55ca-4dd6-9bdb-ba290360b41b.png',
-  hero: 'https://r2-pub.rork.com/generated-images/70c70f7c-4aa9-4eaa-8683-4884d8a4c6d6.png',
+  bored: 'https://r2-pub.rork.com/generated-images/ebc63c17-6e4f-4107-ab7a-b3703140fbe7.png',
+  party: 'https://r2-pub.rork.com/generated-images/a29521e8-fdb3-478a-8fcd-bc9b1b8d7352.png',
+  portrait: 'https://r2-pub.rork.com/generated-images/5446f691-ba97-4a91-a120-fea521c4a401.png',
+  hero: 'https://r2-pub.rork.com/generated-images/d712f74b-8b2d-4d84-a19f-d051443d156d.png',
 } as const;
 
 function EnterStage({ active, delay = 0, children, style }: { active: boolean; delay?: number; children: React.ReactNode; style?: any }) {
@@ -237,7 +237,7 @@ export default function OnboardingScreen() {
 
             <OnboardPage
               active={currentPage === 1}
-              eyebrow="ENTER PLAYVIRALS"
+              eyebrow="ENTER PARTYBOT"
               title={'We came to\nblow up the room'}
               subtitle="Quick, hilarious party games — ready to go in seconds."
             >
@@ -248,7 +248,7 @@ export default function OnboardingScreen() {
               <EnterStage active={currentPage === 2} delay={60}>
                 <View style={styles.idCard}>
                   <View style={styles.idCardTopBar}>
-                    <Text style={styles.idCardBrand}>PLAYVIRALS</Text>
+                    <Text style={styles.idCardBrand}>PARTYBOT</Text>
                     <Text style={styles.idCardBrandSub}>OFFICIAL ID</Text>
                   </View>
                   <View style={styles.idCardBody}>

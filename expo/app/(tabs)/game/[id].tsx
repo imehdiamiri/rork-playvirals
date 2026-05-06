@@ -126,7 +126,7 @@ export default function GameDetailScreen() {
               <View style={styles.premiumTextContainer}>
                 <Text style={styles.premiumTitle}>Premium Game</Text>
                 <Text style={styles.premiumSubtitle}>
-                  Subscribe to PlayVirals+ to unlock {game.name} and every other premium game.
+                  Subscribe to PartyBot+ to unlock {game.name} and every other premium game.
                 </Text>
               </View>
             </View>
@@ -159,7 +159,7 @@ export default function GameDetailScreen() {
               />
               <View style={styles.premiumButtonContent}>
                 <IconSymbol name="crown.fill" size={16} color="white" />
-                <Text style={styles.premiumButtonText}>Unlock with PlayVirals+</Text>
+                <Text style={styles.premiumButtonText}>Unlock with PartyBot+</Text>
               </View>
             </TouchableOpacity>
           </View>

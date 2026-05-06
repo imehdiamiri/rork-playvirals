@@ -111,7 +111,7 @@ export default function AuthScreen() {
                 />
                 <Ionicons name="game-controller" size={36} color={Colors.blue} />
               </View>
-              <Text style={styles.appTitle}>PlayVirals</Text>
+              <Text style={styles.appTitle}>PartyBot</Text>
               <Text style={styles.appSubtitle}>
                 Sign in to unlock all games,{'\n'}earn rewards & play with friends
               </Text>

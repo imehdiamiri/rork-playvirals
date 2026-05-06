@@ -379,7 +379,7 @@ export const useFriendsStore = create<FriendsState>()(
 
       getInviteShareMessage: () => {
         const code = get().inviteCode;
-        return `Join me on PlayVirals 🎮 — use my invite code ${code} to get +10 ★: https://www.playvirals.com/invite?code=${code}`;
+        return `Join me on PartyBot 🎮 — use my invite code ${code} to get +10 ★: https://www.playvirals.com/invite?code=${code}`;
       },
     }),
     {

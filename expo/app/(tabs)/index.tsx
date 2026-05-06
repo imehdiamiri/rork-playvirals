@@ -38,7 +38,7 @@ export default function GamesScreen() {
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 6, paddingBottom: 120 }]}>
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>PlayVirals</Text>
+            <Text style={styles.title}>PartyBot</Text>
           </View>
           <TouchableOpacity onPress={() => router.push('/lobby/join')} activeOpacity={0.85}>
             <LiquidGlass variant="high" radius={20} style={styles.joinButton} shadow={false}>
