@@ -1,6 +1,7 @@
 import { Colors } from '@/src/theme/Colors';
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { GameSession } from '@/src/store/useGameStore';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import * as Haptics from '@/src/utils/safeHaptics';
@@ -39,8 +40,9 @@ export function SpinBottleSession({ session }: Props) {
   const [usedTruths, setUsedTruths] = useState<Set<string>>(new Set());
   const [usedDares, setUsedDares] = useState<Set<string>>(new Set());
 
-  const bottleAnim = useRef(new Animated.Value(0)).current;
+  const bottleAnim = useSharedValue(0);
   const bottleAngleRef = useRef(0);
+  const bottleStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${bottleAnim.value}deg` }] }));
 
   const sw = Dimensions.get('window').width;
   const circleSize = sw - 64;
@@ -62,16 +64,16 @@ export function SpinBottleSession({ session }: Props) {
 
     bottleAngleRef.current = newAngle;
 
-    Animated.timing(bottleAnim, {
-      toValue: newAngle,
-      duration: 4000,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start(() => {
+    const onSpinDone = () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSelectedIdx(target);
       setPhase('landed');
-    });
+    };
+    bottleAnim.value = withTiming(
+      newAngle,
+      { duration: 4000, easing: Easing.out(Easing.cubic) },
+      (done) => { if (done) runOnJS(onSpinDone)(); },
+    );
   };
 
   const handleChoose = (c: Choice) => {
@@ -117,14 +119,9 @@ export function SpinBottleSession({ session }: Props) {
   const handleRestart = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     bottleAngleRef.current = 0;
-    bottleAnim.setValue(0);
+    bottleAnim.value = 0;
     setPhase('idle');
   };
-
-  const rotateInterpolate = bottleAnim.interpolate({
-    inputRange: [0, 360],
-    outputRange: ['0deg', '360deg'],
-  });
 
   const selectedPlayer = players[selectedIdx];
   const accentColor = PLAYER_COLORS[selectedIdx % PLAYER_COLORS.length];
@@ -227,7 +224,7 @@ export function SpinBottleSession({ session }: Props) {
         })}
 
         {/* Bottle */}
-        <Animated.View style={[{ alignItems: 'center', justifyContent: 'center' }, { transform: [{ rotate: rotateInterpolate }] }]} accessible accessibilityLabel="Spinning bottle">
+        <Animated.View style={[{ alignItems: 'center', justifyContent: 'center' }, bottleStyle]} accessible accessibilityLabel="Spinning bottle">
           <BeerBottleView width={circleSize * 0.38} />
         </Animated.View>
 

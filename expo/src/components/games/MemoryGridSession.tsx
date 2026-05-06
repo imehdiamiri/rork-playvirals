@@ -1,6 +1,7 @@
 import { Colors } from '@/src/theme/Colors';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions, Animated as RNAnimated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, interpolate, Extrapolation } from 'react-native-reanimated';
 import { GameSession } from '@/src/store/useGameStore';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import * as Haptics from '@/src/utils/safeHaptics';
@@ -69,33 +70,22 @@ function FlipTile({ isFlipped, isMatched, color, symbol, size, onPress, disabled
   isFlipped: boolean; isMatched: boolean; color: string; symbol: string;
   size: number; onPress: () => void; disabled: boolean; index: number;
 }) {
-  const flipAnim = React.useRef(new RNAnimated.Value(0)).current;
+  const flipAnim = useSharedValue(0);
   const isShowingFront = isFlipped || isMatched;
 
   React.useEffect(() => {
-    RNAnimated.spring(flipAnim, {
-      toValue: isShowingFront ? 1 : 0,
-      friction: 8,
-      tension: 60,
-      useNativeDriver: true,
-    }).start();
+    flipAnim.value = withSpring(isShowingFront ? 1 : 0, { damping: 12, stiffness: 130 });
   }, [isShowingFront]);
 
-  const frontInterpolate = flipAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: ['180deg', '90deg', '0deg'],
+  const frontStyle = useAnimatedStyle(() => {
+    const deg = interpolate(flipAnim.value, [0, 0.5, 1], [180, 90, 0], Extrapolation.CLAMP);
+    const op = flipAnim.value >= 0.5 ? 1 : 0;
+    return { transform: [{ rotateY: `${deg}deg` }], opacity: op };
   });
-  const backInterpolate = flipAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: ['0deg', '90deg', '180deg'],
-  });
-  const frontOpacity = flipAnim.interpolate({
-    inputRange: [0, 0.5, 0.5, 1],
-    outputRange: [0, 0, 1, 1],
-  });
-  const backOpacity = flipAnim.interpolate({
-    inputRange: [0, 0.5, 0.5, 1],
-    outputRange: [1, 1, 0, 0],
+  const backStyle = useAnimatedStyle(() => {
+    const deg = interpolate(flipAnim.value, [0, 0.5, 1], [0, 90, 180], Extrapolation.CLAMP);
+    const op = flipAnim.value < 0.5 ? 1 : 0;
+    return { transform: [{ rotateY: `${deg}deg` }], opacity: op };
   });
 
   return (
@@ -113,7 +103,7 @@ function FlipTile({ isFlipped, isMatched, color, symbol, size, onPress, disabled
       accessibilityRole="button"
     >
       {/* Front face */}
-      <RNAnimated.View style={[StyleSheet.absoluteFill, { transform: [{ rotateY: frontInterpolate }], opacity: frontOpacity, backfaceVisibility: 'hidden' }]}>
+      <Animated.View style={[StyleSheet.absoluteFill, { backfaceVisibility: 'hidden' }, frontStyle]}>
         <LinearGradient
           colors={[
             color + (isMatched ? '59' : 'A6'),
@@ -127,9 +117,9 @@ function FlipTile({ isFlipped, isMatched, color, symbol, size, onPress, disabled
         >
           <IconSymbol name={symbol as any} size={28} color="white" />
         </LinearGradient>
-      </RNAnimated.View>
+      </Animated.View>
       {/* Back face */}
-      <RNAnimated.View style={[StyleSheet.absoluteFill, { transform: [{ rotateY: backInterpolate }], opacity: backOpacity, backfaceVisibility: 'hidden' }]}>
+      <Animated.View style={[StyleSheet.absoluteFill, { backfaceVisibility: 'hidden' }, backStyle]}>
         <LinearGradient
           colors={['#38408C', '#1E2359']}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
@@ -137,7 +127,7 @@ function FlipTile({ isFlipped, isMatched, color, symbol, size, onPress, disabled
         >
           <IconSymbol name="questionmark" size={24} color="rgba(90,200,250,0.75)" />
         </LinearGradient>
-      </RNAnimated.View>
+      </Animated.View>
     </Pressable>
   );
 }

@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, Animated, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, Modal, Dimensions } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS } from 'react-native-reanimated';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from '@/src/utils/safeHaptics';
@@ -19,40 +20,43 @@ interface Props {
  */
 export function FirstTimeHintOverlay({ storageKey, icon, title, tip, accent = '#007AFF' }: Props) {
   const [visible, setVisible] = useState(false);
-  const scaleAnim = useRef(new Animated.Value(0.92)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const scale = useSharedValue(0.92);
+  const opacity = useSharedValue(0);
 
   useEffect(() => {
     const key = `hint_seen_${storageKey}`;
     AsyncStorage.getItem(key).then(val => {
       if (val !== 'true') {
         setVisible(true);
-        Animated.parallel([
-          Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 60, friction: 8 }),
-          Animated.timing(opacityAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
-        ]).start();
+        scale.value = withSpring(1, { damping: 12, stiffness: 130 });
+        opacity.value = withTiming(1, { duration: 250 });
       }
     });
   }, []);
 
+  const finishDismiss = () => {
+    setVisible(false);
+    AsyncStorage.setItem(`hint_seen_${storageKey}`, 'true');
+  };
+
   const dismiss = () => {
     Haptics.selectionAsync();
-    Animated.parallel([
-      Animated.spring(scaleAnim, { toValue: 0.92, useNativeDriver: true, tension: 60, friction: 8 }),
-      Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-    ]).start(() => {
-      setVisible(false);
-      AsyncStorage.setItem(`hint_seen_${storageKey}`, 'true');
+    scale.value = withSpring(0.92, { damping: 12, stiffness: 130 });
+    opacity.value = withTiming(0, { duration: 200 }, (done) => {
+      if (done) runOnJS(finishDismiss)();
     });
   };
+
+  const backdropStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  const cardStyle = useAnimatedStyle(() => ({ opacity: opacity.value, transform: [{ scale: scale.value }] }));
 
   if (!visible) return null;
 
   return (
     <Modal transparent animationType="none" visible={visible}>
-      <Animated.View style={[st.backdrop, { opacity: opacityAnim }]}>
+      <Animated.View style={[st.backdrop, backdropStyle]}>
         <Pressable style={st.dismissArea} onPress={dismiss} />
-        <Animated.View style={[st.card, { transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}>
+        <Animated.View style={[st.card, cardStyle]}>
           {/* Icon */}
           <View style={[st.iconCircle, { backgroundColor: accent + '26' }]}>
             <IconSymbol name={icon as any} size={42} color={accent} />

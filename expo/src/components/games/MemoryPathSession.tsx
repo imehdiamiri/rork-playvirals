@@ -1,6 +1,8 @@
 import { Colors } from '@/src/theme/Colors';
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Animated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Dimensions } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming } from 'react-native-reanimated';
+
 import { GameSession } from '@/src/store/useGameStore';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import * as Haptics from '@/src/utils/safeHaptics';
@@ -128,7 +130,8 @@ export function MemoryPathSession({ session }: Props) {
   const [wrongTile, setWrongTile] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [results, setResults] = useState<PlayerResult[]>([]);
-  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const shakeAnim = useSharedValue(0);
+  const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shakeAnim.value }] }));
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const players = session.players;
@@ -177,13 +180,13 @@ export function MemoryPathSession({ session }: Props) {
   };
 
   const triggerShake = () => {
-    Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: -4, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 4, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -4, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 4, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
-    ]).start();
+    shakeAnim.value = withSequence(
+      withTiming(-4, { duration: 50 }),
+      withTiming(4, { duration: 50 }),
+      withTiming(-4, { duration: 50 }),
+      withTiming(4, { duration: 50 }),
+      withTiming(0, { duration: 50 }),
+    );
   };
 
   const handleTap = (row: number, col: number) => {
@@ -324,7 +327,7 @@ export function MemoryPathSession({ session }: Props) {
           </View>
           <Text style={s.progTx}>Step {stepsFound} of {stepsToFind}</Text>
         </View>
-        <Animated.View style={[s.gridWrap, { transform: [{ translateX: shakeAnim }] }]}>
+        <Animated.View style={[s.gridWrap, shakeStyle]}>
           {Array.from({ length: GRID }).map((_, r) => (
             <View key={r} style={s.gridRow}>
               {Array.from({ length: GRID }).map((_, c) => {

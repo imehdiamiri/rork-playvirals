@@ -76,8 +76,16 @@
 - [x] Updated `.env.example` (Firebase web config + `FIREBASE_SERVICE_ACCOUNT` + `FIREBASE_DATABASE_URL` + `ADMIN_SESSION_SECRET`) and rewrote `README.md` with the Firebase setup + RTDB schema.
 - [x] `bun run build` passes (Next.js 15, all 13 admin routes compile).
 
+## Phase 7 — Animation engine consolidation
+- [x] Migrated all remaining JS-thread `Animated` usages in game components to Reanimated 4 shared values + `useAnimatedStyle` so animations run on the UI thread (no JS-thread interpolation).
+  - `PhaseTransition` (generic enter helper) — `withTiming` / `withSpring`.
+  - `FirstTimeHintOverlay` — modal scale + opacity via shared values, `runOnJS` for AsyncStorage finalizer.
+  - `MemoryPathSession` — wrong-tile shake via `withSequence(withTiming...)`.
+  - `SpinBottleSession` — bottle rotation via `withTiming` + `Easing.out(cubic)`, `runOnJS` callback for landed phase.
+  - `MemoryGridSession.FlipTile` — 3D flip front/back via `interpolate` on a shared value.
+- [x] runChecks passes after Phase 7 migration.
+
 ## Follow-ups (next sessions)
-- Phase 7 — animation engine consolidation (`Animated` → Reanimated), low-end Android profiling.
 - Phase 8 — extract a shared `RoundHeader` and `SetupCard` primitive once 2+ games actually need them.
 - Set RC server secret: `firebase functions:secrets:set REVENUECAT_SECRET` and deploy updated `database.rules.json` (`firebase deploy --only database`).
 - Bootstrap the first admin: `admin.auth().setCustomUserClaims(uid, { admin: true })` (one-time, from any environment with the service account).
