@@ -343,17 +343,23 @@ export default function ProfileScreen() {
           headerBlurEffect: 'systemThinMaterialDark',
           headerTitleStyle: { fontFamily: 'Viral-Black', fontSize: 20, color: Colors.white },
           headerRight: () => (
-            <TouchableOpacity 
-              onPress={() => safeBack()} 
-              style={{ 
+            <TouchableOpacity
+              onPress={() => safeBack()}
+              accessibilityLabel="Close"
+              hitSlop={10}
+              style={{
                 marginRight: Platform.OS === 'ios' ? 0 : 16,
-                flexDirection: 'row',
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: 'rgba(255,255,255,0.14)',
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.18)',
                 alignItems: 'center',
-                paddingHorizontal: 8,
-                paddingVertical: 6,
+                justifyContent: 'center',
               }}
             >
-              <Text style={{ color: 'white', fontWeight: '600', fontSize: 16 }}>Done</Text>
+              <Ionicons name="close" size={20} color="white" />
             </TouchableOpacity>
           ),
           headerBackVisible: false,

@@ -66,7 +66,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                   accessibilityLabel={options.tabBarAccessibilityLabel}
                   style={[styles.tabItem, isFocused && styles.tabItemActive]}
                 >
-                  <IconSymbol size={15} name={item.icon as any} color={tint} weight="bold" />
+                  <IconSymbol size={22} name={item.icon as any} color={tint} weight="bold" />
                   <Text
                     style={isFocused ? styles.labelActive : styles.labelInactive}
                     numberOfLines={1}
@@ -114,8 +114,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
+    gap: 7,
+    paddingVertical: 12,
     paddingHorizontal: 8,
     borderRadius: 22,
     overflow: 'hidden',
