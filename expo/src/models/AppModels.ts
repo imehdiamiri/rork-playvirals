@@ -19,14 +19,14 @@ export const GameModeDetails: Record<
   [GameMode.multiDevice]: {
     title: 'Multi Phone',
     subtitle: 'Everyone plays on their own phone',
-    icon: 'apps', // SF: apps.iphone
+    icon: 'iphone.radiowaves.left.and.right', // SF
     accentColor: Colors.green, // green
     shortLabel: 'Multi-D',
   },
   [GameMode.teamMode]: {
     title: 'Team Mode',
     subtitle: 'Split into 2 teams and compete',
-    icon: 'groups', // SF: person.line.dotted.person.fill
+    icon: 'person.2.wave.2.fill', // SF
     accentColor: '#AF52DE', // purple
     shortLabel: 'Team',
   },

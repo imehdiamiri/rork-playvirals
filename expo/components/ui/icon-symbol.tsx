@@ -96,10 +96,13 @@ const MAPPING = {
   'person.line.dotted.person.fill': 'groups',
   'iphone': 'smartphone',
   'iphone.gen3': 'smartphone',
+  'iphone.radiowaves.left.and.right': 'phonelink-ring',
   'apps.iphone': 'devices',
   'smartphone': 'smartphone',
   'apps': 'apps',
   'groups': 'groups',
+  'person.2.wave.2.fill': 'diversity-3',
+  'diversity.3': 'diversity-3',
 
   // ─── Content ───
   'bookmark': 'bookmark-border',

@@ -21,13 +21,15 @@ const TAB_ITEMS = [
   { name: 'factory', label: 'Factory', icon: 'wand.and.stars', accent: Colors.purple },
 ] as const;
 
-function TabPill({ focused }: { focused: boolean; accent: string }) {
+const ACTIVE_BLUE = '#0A84FF';
+
+function TabIndicator({ focused }: { focused: boolean }) {
+  const scale = useSharedValue(focused ? 1 : 0.6);
   const opacity = useSharedValue(focused ? 1 : 0);
-  const scale = useSharedValue(focused ? 1 : 0.7);
 
   useEffect(() => {
-    opacity.value = withTiming(focused ? 1 : 0, { duration: 240 });
-    scale.value = withSpring(focused ? 1 : 0.7, { damping: 16, stiffness: 200 });
+    opacity.value = withTiming(focused ? 1 : 0, { duration: 220 });
+    scale.value = withSpring(focused ? 1 : 0.6, { damping: 16, stiffness: 220 });
   }, [focused, opacity, scale]);
 
   const aStyle = useAnimatedStyle(() => ({
@@ -36,18 +38,15 @@ function TabPill({ focused }: { focused: boolean; accent: string }) {
   }));
 
   return (
-    <Animated.View
-      pointerEvents="none"
-      style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }, aStyle]}
-    >
+    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 16 }, aStyle]}>
       <View
         style={[
           StyleSheet.absoluteFillObject,
           {
-            borderRadius: 18,
-            backgroundColor: 'rgba(255,255,255,0.16)',
+            borderRadius: 16,
+            backgroundColor: 'rgba(10,132,255,0.18)',
             borderWidth: 0.5,
-            borderColor: 'rgba(255,255,255,0.22)',
+            borderColor: 'rgba(10,132,255,0.45)',
           },
         ]}
       />
@@ -96,31 +95,32 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                 }
               };
 
-              const tint = isFocused ? '#FFFFFF' : 'rgba(255,255,255,0.55)';
+              const tint = isFocused ? ACTIVE_BLUE : 'rgba(255,255,255,0.6)';
 
               return (
                 <Pressable
                   key={route.key}
                   onPress={onPress}
                   android_ripple={{
-                    color: 'rgba(255,255,255,0.18)',
+                    color: 'rgba(10,132,255,0.20)',
                     borderless: true,
-                    radius: 28,
+                    radius: 32,
                   }}
                   accessibilityRole="button"
                   accessibilityState={isFocused ? { selected: true } : {}}
                   accessibilityLabel={options.tabBarAccessibilityLabel}
                   style={styles.tabItem}
                 >
-                  <View style={[styles.iconContainer, isFocused && styles.iconContainerActive]}>
-                    <TabPill focused={isFocused} accent={item.accent} />
-                    <IconSymbol size={22} name={item.icon as any} color={tint} />
-                    {isFocused && (
-                      <Text style={styles.labelActive} numberOfLines={1}>
-                        {item.label}
-                      </Text>
-                    )}
+                  <View style={styles.iconContainer}>
+                    <TabIndicator focused={isFocused} />
+                    <IconSymbol size={28} name={item.icon as any} color={tint} />
                   </View>
+                  <Text
+                    style={[styles.label, isFocused && styles.labelActive]}
+                    numberOfLines={1}
+                  >
+                    {item.label}
+                  </Text>
                 </Pressable>
               );
             })}
@@ -144,14 +144,14 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   tabBarContainer: {
     position: 'absolute',
-    left: 28,
-    right: 28,
-    height: 58,
+    left: 22,
+    right: 22,
+    height: 76,
     ...platformShadow(18, '#000', 0.5, 28),
   },
   tabBarShell: {
     flex: 1,
-    borderRadius: 29,
+    borderRadius: 28,
     overflow: 'hidden',
   },
   tabBarContent: {
@@ -159,32 +159,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 5,
+    paddingHorizontal: 6,
+    paddingTop: 8,
+    paddingBottom: 6,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    gap: 2,
   },
   iconContainer: {
-    flexDirection: 'row',
+    width: 56,
+    height: 36,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 42,
-    paddingHorizontal: 10,
-    minWidth: 42,
-    borderRadius: 18,
-    gap: 6,
   },
-  iconContainerActive: {
-    paddingHorizontal: 14,
+  label: {
+    fontFamily: 'Viral-Black',
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 11,
+    letterSpacing: 0.2,
+    includeFontPadding: false,
   },
   labelActive: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.1,
+    color: ACTIVE_BLUE,
   },
 });
 
