@@ -44,7 +44,7 @@ const ART = {
   bored: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/gyy4cw0q1z7hha68b3m2o.png',
   party: 'https://r2-pub.rork.com/generated-images/58eb863e-a8bb-4e45-a5e0-313428ca4ef2.png',
   portrait: 'https://r2-pub.rork.com/generated-images/47f129bf-55ca-4dd6-9bdb-ba290360b41b.png',
-  hero: 'https://r2-pub.rork.com/generated-images/44c18d4b-7114-427c-a32c-1785714ad91b.png',
+  hero: 'https://r2-pub.rork.com/generated-images/70c70f7c-4aa9-4eaa-8683-4884d8a4c6d6.png',
 } as const;
 
 function EnterStage({ active, delay = 0, children, style }: { active: boolean; delay?: number; children: React.ReactNode; style?: any }) {
