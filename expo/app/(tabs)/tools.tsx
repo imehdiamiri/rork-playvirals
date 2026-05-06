@@ -1,119 +1,108 @@
 import { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Platform } from 'react-native';
-
-// Platform-safe BlurView
-let BlurView: any = null;
-if (Platform.OS === 'ios') {
-  try { BlurView = require('expo-blur').BlurView; } catch {}
-}
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-
 import { useRouter } from 'expo-router';
 
 import { AppBackgroundView } from '@/src/components/AppBackgroundView';
-import { LiquidGlass } from '@/src/components/LiquidGlass';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { CardCategoriesList } from '@/src/models/CardModels';
-import { PartyToolsSection } from '@/src/components/tools/PartyToolsSection';
+import { PARTY_TOOLS, PartyToolType } from '@/src/components/tools/PartyToolsSection';
 
 export default function ToolsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [showSaved, setShowSaved] = useState(false);
+  const [showSaved, setShowSaved] = useState<boolean>(false);
 
-  const totalCardsCount = 520; // Mock total count for now
+  const handleToolPress = (id: PartyToolType) => {
+    router.push(`/(tools)/${id}` as any);
+  };
 
   return (
     <View style={styles.container}>
       <AppBackgroundView />
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 6, paddingBottom: 120 }]}>
-        
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + 6, paddingBottom: 120 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Tools</Text>
-          </View>
+          <Text style={styles.headerTitle}>Tools</Text>
           <View style={{ flex: 1 }} />
-          <TouchableOpacity onPress={() => setShowSaved(true)} activeOpacity={0.85}>
-            <LiquidGlass variant="mid" radius={20} style={styles.bookmarkButton} shadow={false}>
-              <IconSymbol name={showSaved ? 'bookmark.fill' : 'bookmark'} size={18} color="white" />
-            </LiquidGlass>
+          <TouchableOpacity
+            onPress={() => setShowSaved((v) => !v)}
+            activeOpacity={0.85}
+            style={styles.iconButton}
+          >
+            <IconSymbol
+              name={showSaved ? 'bookmark.fill' : 'bookmark'}
+              size={18}
+              color="white"
+            />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/profile')} activeOpacity={0.85}>
-            <LiquidGlass variant="mid" radius={20} style={styles.profileButton} shadow={false}>
-              <IconSymbol name="person.crop.circle" size={22} color="white" />
-            </LiquidGlass>
+          <TouchableOpacity
+            onPress={() => router.push('/profile')}
+            activeOpacity={0.85}
+            style={styles.iconButton}
+          >
+            <IconSymbol name="person.crop.circle" size={22} color="white" />
           </TouchableOpacity>
         </View>
 
-        {/* Tools Section */}
-        <PartyToolsSection showsHeader={false} />
-
-        {/* Cards Section — distinct container */}
-        <View style={styles.cardsSectionWrapper}>
-          <LinearGradient
-            colors={['rgba(255,90,140,0.10)', 'rgba(120,80,255,0.06)', 'rgba(255,255,255,0.02)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={styles.cardsSectionBorder} pointerEvents="none" />
-
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleRow}>
-              <View style={styles.titleIconBadge}>
-                <IconSymbol name="rectangle.fill.on.rectangle.angled.fill" size={14} color="#FF5A8C" weight="bold" />
-              </View>
-              <Text style={styles.sectionTitle}>Ready to Use Cards</Text>
+        {/* Section: Party Tools */}
+        <Text style={styles.sectionTitle}>Party Tools</Text>
+        <Text style={styles.sectionSubtitle}>Quick utilities to spice up the round.</Text>
+        <View style={styles.sectionCard}>
+          {PARTY_TOOLS.map((tool, index) => (
+            <View key={tool.id}>
+              <TouchableOpacity
+                style={styles.row}
+                activeOpacity={0.7}
+                onPress={() => handleToolPress(tool.id)}
+              >
+                <View style={[styles.rowIcon, { backgroundColor: tool.tint + '22' }]}>
+                  <IconSymbol name={tool.icon} size={18} color={tool.tint} weight="bold" />
+                </View>
+                <View style={styles.rowText}>
+                  <Text style={styles.rowTitle}>{tool.title}</Text>
+                  <Text style={styles.rowSubtitle}>{tool.subtitle}</Text>
+                </View>
+                <IconSymbol name="chevron.right" size={14} color="rgba(255,255,255,0.3)" />
+              </TouchableOpacity>
+              {index < PARTY_TOOLS.length - 1 && <View style={styles.divider} />}
             </View>
-            <View style={{ flex: 1 }} />
-            <View style={styles.totalBadge}>
-              <Text style={styles.totalBadgeText}>{totalCardsCount}</Text>
-            </View>
-          </View>
+          ))}
+        </View>
 
-          <View style={styles.cardsList}>
-            {/* Categories */}
-            <View style={styles.categoriesContainer}>
-              {CardCategoriesList.map((category) => (
-                <TouchableOpacity 
-                  key={category.id} 
-                  style={styles.rowContainer} 
-                  activeOpacity={0.8}
-                  onPress={() => router.push(`/cards/${category.id}` as any)}
-                >
-                  {Platform.OS === 'ios' && BlurView ? (
-                    <BlurView intensity={25} tint="dark" style={styles.categoryRow}>
-                      <LinearGradient colors={['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.00)']} style={styles.categoryBackground}>
-                        <View style={[styles.categoryIconContainer, { backgroundColor: category.accentColor + '20' }]}>
-                          <IconSymbol name={category.icon as any} size={18} color={category.accentColor} />
-                        </View>
-                        <View style={styles.categoryTextContainer}>
-                          <Text style={[styles.categoryTitle, { color: category.accentColor }]}>{category.title}</Text>
-                          <Text style={styles.categorySubtitle}>{category.subtitle}</Text>
-                        </View>
-                        <IconSymbol name="chevron.right" size={16} color="rgba(255,255,255,0.3)" />
-                      </LinearGradient>
-                    </BlurView>
-                  ) : (
-                    <View style={[styles.categoryRow, { backgroundColor: 'rgba(20,20,30,0.92)' }]}>
-                      <LinearGradient colors={['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.00)']} style={styles.categoryBackground}>
-                        <View style={[styles.categoryIconContainer, { backgroundColor: category.accentColor + '20' }]}>
-                          <IconSymbol name={category.icon as any} size={18} color={category.accentColor} />
-                        </View>
-                        <View style={styles.categoryTextContainer}>
-                          <Text style={[styles.categoryTitle, { color: category.accentColor }]}>{category.title}</Text>
-                          <Text style={styles.categorySubtitle}>{category.subtitle}</Text>
-                        </View>
-                        <IconSymbol name="chevron.right" size={16} color="rgba(255,255,255,0.3)" />
-                      </LinearGradient>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
+        {/* Section: Card Decks */}
+        <Text style={styles.sectionTitle}>Card Decks</Text>
+        <Text style={styles.sectionSubtitle}>Ready to play. Tap any deck to start.</Text>
+        <View style={styles.sectionCard}>
+          {CardCategoriesList.map((category, index) => (
+            <View key={category.id}>
+              <TouchableOpacity
+                style={styles.row}
+                activeOpacity={0.7}
+                onPress={() => router.push(`/cards/${category.id}` as any)}
+              >
+                <View style={[styles.rowIcon, { backgroundColor: category.accentColor + '22' }]}>
+                  <IconSymbol
+                    name={category.icon as any}
+                    size={18}
+                    color={category.accentColor}
+                  />
+                </View>
+                <View style={styles.rowText}>
+                  <Text style={styles.rowTitle}>{category.title}</Text>
+                  <Text style={styles.rowSubtitle}>{category.subtitle}</Text>
+                </View>
+                <IconSymbol name="chevron.right" size={14} color="rgba(255,255,255,0.3)" />
+              </TouchableOpacity>
+              {index < CardCategoriesList.length - 1 && <View style={styles.divider} />}
             </View>
-          </View>
+          ))}
         </View>
       </ScrollView>
     </View>
@@ -131,125 +120,77 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
     gap: 10,
-  },
-  headerTextContainer: {
-    gap: 2,
   },
   headerTitle: {
     fontFamily: 'Viral-Black',
-    fontSize: 25,
+    fontSize: 28,
     color: 'white',
   },
-  bookmarkButton: {
+  iconButton: {
     width: 40,
     height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  profileButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardsSectionWrapper: {
-    marginTop: 4,
-    padding: 14,
-    borderRadius: 24,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    gap: 14,
-  },
-  cardsSectionBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  titleIconBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,90,140,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,90,140,0.25)',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   sectionTitle: {
+    fontFamily: 'Viral-Black',
+    fontSize: 18,
+    color: 'white',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.45)',
+    marginBottom: 12,
+    ...(Platform.OS === 'web' ? {} : { fontWeight: '500' as const }),
+  },
+  sectionCard: {
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
+    paddingVertical: 4,
+    marginBottom: 24,
+    overflow: 'hidden',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 14,
+  },
+  rowIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowText: {
+    flex: 1,
+    gap: 2,
+  },
+  rowTitle: {
     fontFamily: 'Viral-Black',
     fontSize: 16,
     color: 'white',
   },
-  totalBadge: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  totalBadgeText: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: 'rgba(255,255,255,0.55)',
-  },
-  cardsList: {
-    gap: 10,
-  },
-  rowContainer: {
-    borderRadius: 18,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  categoriesContainer: {
-    gap: 8,
-  },
-  categoryRow: {
-    borderRadius: 18,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  categoryBackground: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    gap: 16,
-  },
-  categoryIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  categoryTextContainer: {
-    flex: 1,
-    gap: 4,
-  },
-  categoryTitle: {
-    fontFamily: 'Viral-Black',
-    fontSize: 17,
-    color: 'white',
-  },
-  categorySubtitle: {
-    fontSize: 13,
-    fontWeight: '600',
+  rowSubtitle: {
+    fontSize: 12.5,
     color: 'rgba(255,255,255,0.5)',
+    fontWeight: '500',
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    marginLeft: 14 + 38 + 14,
   },
 });
