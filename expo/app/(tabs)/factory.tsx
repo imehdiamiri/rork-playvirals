@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     color: 'white',
     fontSize: 28,
-    fontWeight: '900',
+    fontFamily: 'Viral-Black',
   },
   heroSubtitle: {
     color: 'rgba(255,255,255,0.75)',

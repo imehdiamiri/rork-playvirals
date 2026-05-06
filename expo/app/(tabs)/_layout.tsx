@@ -38,15 +38,15 @@ function TabIndicator({ focused }: { focused: boolean }) {
   }));
 
   return (
-    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 22 }, aStyle]}>
+    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }, aStyle]}>
       <View
         style={[
           StyleSheet.absoluteFillObject,
           {
-            borderRadius: 22,
-            backgroundColor: 'rgba(10,132,255,0.18)',
-            borderWidth: 0.5,
-            borderColor: 'rgba(10,132,255,0.45)',
+            borderRadius: 18,
+            backgroundColor: 'rgba(255,255,255,0.10)',
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: 'rgba(255,255,255,0.22)',
           },
         ]}
       />
@@ -113,7 +113,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                 >
                   <View style={styles.pill}>
                     <TabIndicator focused={isFocused} />
-                    <IconSymbol size={32} name={item.icon as any} color={tint} />
+                    <IconSymbol size={26} name={item.icon as any} color={tint} />
                     <Text
                       style={[styles.label, isFocused && styles.labelActive]}
                       numberOfLines={1}
@@ -146,12 +146,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 22,
     right: 22,
-    height: 84,
+    height: 64,
     ...platformShadow(18, '#000', 0.5, 28),
   },
   tabBarShell: {
     flex: 1,
-    borderRadius: 28,
+    borderRadius: 24,
     overflow: 'hidden',
   },
   tabBarContent: {
@@ -160,8 +160,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingHorizontal: 6,
-    paddingTop: 8,
-    paddingBottom: 6,
+    paddingTop: 4,
+    paddingBottom: 4,
   },
   tabItem: {
     flex: 1,
@@ -169,13 +169,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pill: {
-    minWidth: 70,
-    height: 68,
-    paddingHorizontal: 12,
-    borderRadius: 22,
+    minWidth: 64,
+    height: 56,
+    paddingHorizontal: 10,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 0,
   },
   label: {
     fontFamily: 'Viral-Black',
