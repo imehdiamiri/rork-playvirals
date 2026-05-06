@@ -239,6 +239,10 @@
 ### Phase L10 — Launch readiness
 - [x] `RootErrorBoundary` already at the root; combined with the closed/expired room handling in `useMultiplayerStore` peers exit gracefully when sessions die.
 - [x] No misleading multiplayer entry points remain (Phase L2). No leaked secrets (Phase L1). No client-trusted wallet writes (Phase L6).
+- [x] User-facing reconnect / host-migration UX:
+  - `useMultiplayerStore` watches `.info/connected` and exposes `connectionState`. Drops emit a "Reconnecting to room…" toast; recovery emits "Back online".
+  - Host migration is announced via a toast (`<player> is the new host` / `You are now the host`) keyed off `previousHostId` transitions in the live snapshot.
+  - New `expo/src/components/MultiplayerStatusBanner.tsx` — slim animated pill mounted in `lobby/[roomCode].tsx` and `game/[id]/session.tsx`. Shows during reconnects only and explains who players are waiting on.
 
 ### Deploy checklist (operator)
 1. `firebase deploy --only functions` — picks up `redeemInvite`, `ensureInviteCode`, `sweepStaleRooms` and the tightened `generateCard` payload guard.
@@ -250,4 +254,4 @@
 ### TestFlight / beta readiness verdict
 - TestFlight: **safe**. No leaked secrets, no fake multiplayer flows, no client-trusted economy, room sessions survive brief disconnects.
 - Open beta: **safe** for an invite-list cohort. Watch the sweeper logs and `aiUsage` quotas before opening to public.
-- Soft launch / paid acquisition: hold until a `lastActivityAt` heartbeat and a real host-migration UX banner ship (currently silent / best-effort).
+- Soft launch / paid acquisition: host-migration UX banner now shipped (Phase L10). Remaining gating items before paid acquisition are observability (sweeper success metrics, host-migration counters) and a moderation queue for AI-generated cards.

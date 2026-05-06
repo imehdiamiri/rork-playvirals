@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { multiplayerService, MultiplayerRoom } from '../services/MultiplayerService';
 import { gameSyncService, GameStatePayload, PlayerAction } from '../services/GameSyncService';
-import { auth } from '../lib/firebase';
+import { auth, rtdb } from '../lib/firebase';
+import { ref, onValue } from 'firebase/database';
+import { showToast } from '../components/ToastOverlay';
 
 /**
  * useMultiplayerStore — single source of truth for the active room session.
@@ -14,8 +16,16 @@ import { auth } from '../lib/firebase';
  * Host migration: when the current host's player row disappears (left or
  * presence timed out) the store calls `multiplayerService.claimHost`. The
  * lowest joinedAt remaining player wins. Failure is silent (another peer
- * already won the race).
+ * already won the race). Transitions emit toasts ("Reconnecting…",
+ * "<player> is the new host") so users get clear UX feedback.
+ *
+ * Connection state: `.info/connected` is observed while the user is in a
+ * room. `connectionState === 'reconnecting'` flips when RTDB drops, which
+ * the `<MultiplayerStatusBanner/>` surfaces to the player.
  */
+
+export type ConnectionState = 'connected' | 'reconnecting';
+
 interface MultiplayerState {
   currentRoom: MultiplayerRoom | null;
   roomCode: string | null;
@@ -23,6 +33,7 @@ interface MultiplayerState {
   localPlayerId: string | null;
   error: string | null;
   isBusy: boolean;
+  connectionState: ConnectionState;
 
   // Game sync state
   gameState: GameStatePayload | null;
@@ -49,15 +60,56 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
   let gameStateUnsub: (() => void) | null = null;
   let actionsUnsub: (() => void) | null = null;
   let presenceUnsub: (() => void) | null = null;
+  let connectedUnsub: (() => void) | null = null;
+  // Track the previous hostId so we can detect (and announce) host migration.
+  let previousHostId: string | null = null;
 
-  // Try once to promote ourselves to host when the previous host disappears.
-  // RTDB rules + claimHost() guarantee at most one peer succeeds.
-  function maybeClaimHost(room: MultiplayerRoom | null): void {
-    if (!room) return;
+  function startConnectionWatcher(): void {
+    if (connectedUnsub) return;
+    const r = ref(rtdb, '.info/connected');
+    connectedUnsub = onValue(r, (snap) => {
+      const connected = snap.val() === true;
+      const next: ConnectionState = connected ? 'connected' : 'reconnecting';
+      const prev = get().connectionState;
+      if (next === prev) return;
+      set({ connectionState: next });
+      if (next === 'reconnecting') {
+        showToast.warning('Reconnecting to room…');
+      } else if (prev === 'reconnecting') {
+        showToast.success('Back online');
+      }
+    });
+  }
+
+  function stopConnectionWatcher(): void {
+    if (connectedUnsub) { connectedUnsub(); connectedUnsub = null; }
+    set({ connectionState: 'connected' });
+  }
+
+  /**
+   * Apply a fresh room snapshot: reflect host changes, announce host migrations
+   * once per transition, and try to claim host if we're the lowest-joinedAt
+   * peer with no live host.
+   */
+  function applyRoomSnapshot(room: MultiplayerRoom): void {
     const myId = get().localPlayerId;
+    const newHostId = room.hostId;
+    if (previousHostId && newHostId && previousHostId !== newHostId) {
+      const newHost = room.players?.[newHostId];
+      const label = myId && newHostId === myId ? 'You are now the host' : `${newHost?.displayName ?? 'A player'} is the new host`;
+      showToast.info(label);
+    }
+    previousHostId = newHostId ?? previousHostId;
+
+    set({
+      currentRoom: room,
+      isHost: newHostId === myId,
+    });
+
+    // Try to promote ourselves only when the previous host has fully dropped.
     if (!myId) return;
     const players = room.players || {};
-    const hostStillPresent = !!(room.hostId && players[room.hostId]);
+    const hostStillPresent = !!(newHostId && players[newHostId]);
     if (hostStillPresent) return;
     if (!players[myId]) return;
     const candidates = Object.values(players).sort(
@@ -74,6 +126,7 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
     localPlayerId: null,
     error: null,
     isBusy: false,
+    connectionState: 'connected',
     gameState: null,
     playerActions: {},
     presence: {},
@@ -82,6 +135,7 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
       set({ isBusy: true, error: null });
       try {
         const { roomCode, hostId } = await multiplayerService.createRoom(gameId, hostName);
+        previousHostId = hostId;
 
         set({
           roomCode,
@@ -89,21 +143,18 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
           localPlayerId: hostId,
           isBusy: false,
         });
+        startConnectionWatcher();
 
         unsubscribe = multiplayerService.listenToRoom(roomCode, (room) => {
           if (!room || room.status === 'closed') {
             if (get().currentRoom) {
               set({ currentRoom: null, roomCode: null, error: 'Room was closed' });
               if (unsubscribe) unsubscribe();
+              stopConnectionWatcher();
             }
             return;
           }
-          // Reflect actual host on the room snapshot (in case migration happened).
-          set({
-            currentRoom: room,
-            isHost: room.hostId === get().localPlayerId,
-          });
-          maybeClaimHost(room);
+          applyRoomSnapshot(room);
         });
 
         await gameSyncService.setPresence(roomCode, hostId);
@@ -117,7 +168,8 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
     joinRoom: async (code: string, playerName: string) => {
       set({ isBusy: true, error: null });
       try {
-        const { playerId } = await multiplayerService.joinRoom(code, playerName);
+        const { hostId, playerId } = await multiplayerService.joinRoom(code, playerName);
+        previousHostId = hostId;
 
         set({
           roomCode: code,
@@ -125,20 +177,18 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
           localPlayerId: playerId,
           isBusy: false,
         });
+        startConnectionWatcher();
 
         unsubscribe = multiplayerService.listenToRoom(code, (room) => {
           if (!room || room.status === 'closed') {
             if (get().currentRoom) {
               set({ currentRoom: null, roomCode: null, error: 'Room was closed' });
               if (unsubscribe) unsubscribe();
+              stopConnectionWatcher();
             }
             return;
           }
-          set({
-            currentRoom: room,
-            isHost: room.hostId === get().localPlayerId,
-          });
-          maybeClaimHost(room);
+          applyRoomSnapshot(room);
         });
 
         await gameSyncService.setPresence(code, playerId);
@@ -167,6 +217,8 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
       } finally {
         get().unsubscribeAll();
         if (unsubscribe) unsubscribe();
+        stopConnectionWatcher();
+        previousHostId = null;
         set({
           currentRoom: null,
           roomCode: null,
@@ -233,7 +285,8 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
       presenceUnsub = gameSyncService.listenToPresence(roomCode, (presence) => {
         set({ presence });
         // Re-evaluate host migration whenever presence changes.
-        maybeClaimHost(get().currentRoom);
+        const room = get().currentRoom;
+        if (room) applyRoomSnapshot(room);
       });
     },
 

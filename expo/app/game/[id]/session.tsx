@@ -7,6 +7,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useGameStore } from '@/src/store/useGameStore';
 import { GameSessionRenderer } from '@/src/components/games/GameSessionRenderer';
 import { AppBackgroundView } from '@/src/components/AppBackgroundView';
+import { MultiplayerStatusBanner } from '@/src/components/MultiplayerStatusBanner';
 
 export default function GameSessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -47,7 +48,8 @@ export default function GameSessionScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       <AppBackgroundView />
-      
+      <MultiplayerStatusBanner />
+
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity 

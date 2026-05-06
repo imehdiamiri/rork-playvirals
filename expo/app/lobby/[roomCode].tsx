@@ -8,6 +8,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Games } from '@/src/models/AppModels';
 import { useMultiplayerStore } from '@/src/store/useMultiplayerStore';
 import { multiplayerService } from '@/src/services/MultiplayerService';
+import { MultiplayerStatusBanner } from '@/src/components/MultiplayerStatusBanner';
 import * as Clipboard from 'expo-clipboard';
 
 export default function LobbyScreen() {
@@ -105,7 +106,8 @@ export default function LobbyScreen() {
   return (
     <View style={styles.container}>
       <AppBackgroundView />
-      
+      <MultiplayerStatusBanner />
+
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerButton} />
