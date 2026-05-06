@@ -41,10 +41,10 @@ const PAGES = [0, 1, 2, 3] as const;
 type PageIndex = 0 | 1 | 2 | 3;
 
 const ART = {
-  bored: 'https://r2-pub.rork.com/generated-images/020c5154-1e27-47e9-87ab-c7ffcb75230d.png',
-  party: 'https://r2-pub.rork.com/generated-images/61536ff7-b405-469d-8ab8-3e9e5f38d81a.png',
-  pass: 'https://r2-pub.rork.com/generated-images/7ff867e4-3755-42b0-a99b-386494b64e99.png',
-  hero: 'https://r2-pub.rork.com/generated-images/ec6d76b0-e20d-4a63-8ace-1e1379180c90.png',
+  bored: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/gyy4cw0q1z7hha68b3m2o.png',
+  party: 'https://r2-pub.rork.com/generated-images/a1e2567b-9b78-475c-8fda-1f28dd857bcc.png',
+  portrait: 'https://r2-pub.rork.com/generated-images/28690dc8-d374-4867-8500-ad431193dad0.png',
+  hero: 'https://r2-pub.rork.com/generated-images/b2f343f8-cd5f-49e6-898a-43529c733277.png',
 } as const;
 
 function EnterStage({ active, delay = 0, children, style }: { active: boolean; delay?: number; children: React.ReactNode; style?: any }) {
@@ -245,39 +245,53 @@ export default function OnboardingScreen() {
             <View style={styles.page}>
               <EnterStage active={currentPage === 2} delay={60}>
                 <View style={styles.idCard}>
-                  <View style={styles.idCardHeader}>
+                  <View style={styles.idCardTopBar}>
                     <Text style={styles.idCardBrand}>PLAYVIRALS</Text>
-                    <View style={styles.idCardChip} />
+                    <Text style={styles.idCardBrandSub}>OFFICIAL ID</Text>
                   </View>
-                  <Text style={styles.idCardLabel}>PLAYER ID</Text>
-                  <View style={styles.idCardInputWrap}>
-                    <TextInput
-                      ref={inputRef}
-                      value={name}
-                      onChangeText={setName}
-                      placeholder="YOUR NAME"
-                      placeholderTextColor="rgba(255,255,255,0.28)"
-                      style={styles.idCardInput}
-                      autoCapitalize="characters"
-                      autoCorrect={false}
-                      returnKeyType="done"
-                      onSubmitEditing={Keyboard.dismiss}
-                      maxLength={16}
-                    />
-                    <View style={styles.idCardUnderline} />
+                  <View style={styles.idCardBody}>
+                    <View style={styles.idCardPhotoFrame}>
+                      <Image source={{ uri: ART.portrait }} style={styles.idCardPhoto} resizeMode="cover" />
+                    </View>
+                    <View style={styles.idCardFields}>
+                      <Text style={styles.idCardFieldLabel}>NAME</Text>
+                      <TextInput
+                        ref={inputRef}
+                        value={name}
+                        onChangeText={setName}
+                        placeholder="YOUR NAME"
+                        placeholderTextColor="rgba(0,0,0,0.25)"
+                        style={styles.idCardInput}
+                        autoCapitalize="characters"
+                        autoCorrect={false}
+                        returnKeyType="done"
+                        onSubmitEditing={Keyboard.dismiss}
+                        maxLength={14}
+                      />
+                      <View style={styles.idCardUnderline} />
+                      <View style={styles.idCardMetaRow}>
+                        <View style={styles.idCardMetaCol}>
+                          <Text style={styles.idCardMetaLabel}>ROLE</Text>
+                          <Text style={styles.idCardMetaValue}>PARTY HERO</Text>
+                        </View>
+                        <View style={styles.idCardMetaCol}>
+                          <Text style={styles.idCardMetaLabel}>ID</Text>
+                          <Text style={styles.idCardMetaValue}>#001</Text>
+                        </View>
+                      </View>
+                    </View>
                   </View>
-                  <View style={styles.idCardFooter}>
-                    <Text style={styles.idCardFooterText}>OFFICIAL PARTY MEMBER</Text>
-                    <Text style={styles.idCardFooterText}>#001</Text>
-                  </View>
+                  <View style={styles.idCardBottomStripe} />
                 </View>
               </EnterStage>
-              <EnterStage active={currentPage === 2} delay={180}>
-                <View style={[styles.copyCard, { marginTop: 24 }]}>
-                  <Text style={styles.eyebrow}>PLAYER #1</Text>
-                  {!keyboardVisible && <Text style={styles.subtitle}>Tap to fill out your party ID.</Text>}
-                </View>
-              </EnterStage>
+              {!keyboardVisible && (
+                <EnterStage active={currentPage === 2} delay={180}>
+                  <View style={[styles.copyCard, { marginTop: 22 }]}>
+                    <Text style={styles.eyebrow}>WHAT&apos;S YOUR NAME?</Text>
+                    <Text style={styles.subtitle}>Tap the card to fill in your party ID.</Text>
+                  </View>
+                </EnterStage>
+              )}
             </View>
 
             <OnboardPage
@@ -374,35 +388,65 @@ const styles = StyleSheet.create({
   idCard: {
     width: ID_CARD_WIDTH,
     alignSelf: 'center',
-    borderRadius: 28,
-    paddingHorizontal: 22,
-    paddingTop: 18,
-    paddingBottom: 18,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderRadius: 24,
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    backgroundColor: '#FFF7E1',
+    borderWidth: 3,
+    borderColor: '#111827',
     overflow: 'hidden',
-    shadowColor: '#0A84FF',
-    shadowOpacity: 0.35,
+    shadowColor: '#000',
+    shadowOpacity: 0.5,
     shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 12,
+    shadowOffset: { width: 0, height: 14 },
+    elevation: 14,
   },
-  idCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
-  idCardBrand: { fontFamily: 'Viral-Black', color: '#FFD60A', fontSize: 14, letterSpacing: 2 },
-  idCardChip: { width: 32, height: 24, borderRadius: 6, backgroundColor: '#FFD60A', opacity: 0.9 },
-  idCardLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 11, letterSpacing: 2, fontFamily: 'Viral-Black', marginBottom: 6 },
-  idCardInputWrap: { marginBottom: 14 },
+  idCardTopBar: {
+    backgroundColor: '#FFD60A',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: '#111827',
+  },
+  idCardBrand: { fontFamily: 'Viral-Black', color: '#111827', fontSize: 16, letterSpacing: 2 },
+  idCardBrandSub: { fontFamily: 'Viral-Black', color: '#111827', fontSize: 10, letterSpacing: 2, opacity: 0.7 },
+  idCardBody: {
+    flexDirection: 'row',
+    padding: 14,
+    gap: 14,
+    alignItems: 'flex-start',
+  },
+  idCardPhotoFrame: {
+    width: 92,
+    height: 116,
+    borderRadius: 10,
+    borderWidth: 3,
+    borderColor: '#111827',
+    backgroundColor: '#FF9F0A',
+    overflow: 'hidden',
+  },
+  idCardPhoto: { width: '100%', height: '100%' },
+  idCardFields: { flex: 1, paddingTop: 2 },
+  idCardFieldLabel: { color: 'rgba(17,24,39,0.55)', fontSize: 10, letterSpacing: 2, fontFamily: 'Viral-Black', marginBottom: 2 },
   idCardInput: {
-    color: '#fff',
+    color: '#111827',
     fontFamily: 'Viral-Black',
-    fontSize: 30,
-    paddingVertical: Platform.OS === 'ios' ? 10 : 4,
+    fontSize: 22,
+    paddingVertical: Platform.OS === 'ios' ? 6 : 2,
+    paddingHorizontal: 0,
     letterSpacing: 1,
+    includeFontPadding: false,
   },
-  idCardUnderline: { height: 2, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 2 },
-  idCardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-  idCardFooterText: { color: 'rgba(255,255,255,0.4)', fontSize: 9, letterSpacing: 1.5, fontFamily: 'Viral-Black' },
+  idCardUnderline: { height: 2, backgroundColor: '#111827', borderRadius: 2, marginBottom: 12 },
+  idCardMetaRow: { flexDirection: 'row', gap: 14 },
+  idCardMetaCol: { flex: 1 },
+  idCardMetaLabel: { color: 'rgba(17,24,39,0.55)', fontSize: 9, letterSpacing: 2, fontFamily: 'Viral-Black', marginBottom: 2 },
+  idCardMetaValue: { color: '#111827', fontSize: 12, letterSpacing: 1, fontFamily: 'Viral-Black' },
+  idCardBottomStripe: { height: 14, backgroundColor: '#FF2D55', borderTopWidth: 3, borderTopColor: '#111827' },
   bottomControls: { position: 'absolute', left: 24, right: 24, bottom: 0, gap: 10 },
   indicators: { flexDirection: 'row', justifyContent: 'center', gap: 8, height: 10, alignItems: 'center' },
   indicator: { height: 8, borderRadius: 999, backgroundColor: '#fff' },
