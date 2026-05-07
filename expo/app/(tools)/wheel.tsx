@@ -355,7 +355,7 @@ export default function WheelToolScreen() {
 
           {/* Pointer — inward-pointing arrow seated on the rim; color matches the slice under it */}
           <Animated.View
-            style={[styles.pointerWrap, { left: radius - 26 }, pointerBaseAnimatedStyle]}
+            style={[styles.pointerWrap, { left: radius - 22 }, pointerBaseAnimatedStyle]}
             pointerEvents="none"
           >
             <Animated.View style={[styles.pointerArrow, pointerAnimatedStyle]} />
@@ -545,13 +545,18 @@ const styles = StyleSheet.create({
   },
   pointerWrap: {
     position: 'absolute',
-    top: -10,
-    width: 52,
-    height: 60,
-    borderRadius: 14,
+    top: -14,
+    width: 44,
+    height: 72,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    borderBottomLeftRadius: 6,
+    borderBottomRightRadius: 6,
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingTop: 8,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.55)',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -565,23 +570,23 @@ const styles = StyleSheet.create({
   },
   pointerArrow: {
     position: 'absolute',
-    bottom: -2,
+    bottom: -22,
     width: 0,
     height: 0,
-    borderLeftWidth: 18,
-    borderRightWidth: 18,
-    borderTopWidth: 28,
+    borderLeftWidth: 11,
+    borderRightWidth: 11,
+    borderTopWidth: 24,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderTopColor: 'white',
   },
   pointerBolt: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0,0,0,0.6)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.7)',
+    borderColor: 'rgba(255,255,255,0.75)',
     marginTop: 6,
   },
   resultArea: {
