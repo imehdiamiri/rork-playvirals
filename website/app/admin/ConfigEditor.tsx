@@ -43,7 +43,7 @@ export default function ConfigEditor({
     <div className="space-y-4">
       <div className="card p-5">
         <h3 className="font-semibold mb-3">Add new key</h3>
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr_auto] gap-2">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr_1fr_auto] gap-2">
           <input
             className="input"
             placeholder="key.dot.path"
@@ -77,7 +77,8 @@ export default function ConfigEditor({
         </div>
       </div>
 
-      <div className="card overflow-hidden">
+      <div className="card">
+        <div className="table-wrap">
         <table>
           <thead>
             <tr>
@@ -135,6 +136,7 @@ export default function ConfigEditor({
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

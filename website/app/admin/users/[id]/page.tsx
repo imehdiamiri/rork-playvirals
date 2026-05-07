@@ -19,14 +19,14 @@ export default async function UserDetailPage({
 
   return (
     <Shell email={user.email}>
-      <div className="flex items-center gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">{profile.username || "(no name)"}</h1>
-          <div className="text-muted text-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold truncate">{profile.username || "(no name)"}</h1>
+          <div className="text-muted text-sm break-all">
             {profile.email ?? "no email"} · {id}
           </div>
         </div>
-        <div className="ml-auto flex gap-2">
+        <div className="sm:ml-auto flex flex-wrap gap-2">
           {profile.isPremium ? (
             <span className="badge badge-green">
               {profile.isLifetime ? "lifetime" : "subscribed"}
@@ -70,6 +70,7 @@ export default async function UserDetailPage({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
         <div className="card p-5">
           <h3 className="font-semibold mb-3">Recent star transactions</h3>
+          <div className="table-wrap">
           <table>
             <thead>
               <tr>
@@ -102,9 +103,11 @@ export default async function UserDetailPage({
               )}
             </tbody>
           </table>
+          </div>
         </div>
         <div className="card p-5">
           <h3 className="font-semibold mb-3">Recent AI usage</h3>
+          <div className="table-wrap">
           <table>
             <thead>
               <tr>
@@ -128,6 +131,7 @@ export default async function UserDetailPage({
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </Shell>

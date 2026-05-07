@@ -12,7 +12,8 @@ export default async function InvitesPage() {
   return (
     <Shell email={user.email}>
       <h1 className="text-2xl font-semibold mb-6">Invites</h1>
-      <div className="card overflow-hidden">
+      <div className="card">
+        <div className="table-wrap">
         <table>
           <thead>
             <tr>
@@ -48,6 +49,7 @@ export default async function InvitesPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </Shell>
   );

@@ -12,7 +12,8 @@ export default async function AiLogsPage() {
   return (
     <Shell email={user.email}>
       <h1 className="text-2xl font-semibold mb-6">AI Usage Logs</h1>
-      <div className="card overflow-hidden">
+      <div className="card">
+        <div className="table-wrap">
         <table>
           <thead>
             <tr>
@@ -42,6 +43,7 @@ export default async function AiLogsPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </Shell>
   );

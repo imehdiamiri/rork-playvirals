@@ -46,7 +46,7 @@ export default function Editor({ rows }: { rows: Announcement[] }) {
           value={body}
           onChange={(e) => setBody(e.target.value)}
         />
-        <div className="flex gap-3 items-center">
+        <div className="flex flex-wrap gap-3 items-center">
           <select
             className="input w-40"
             value={audience}
@@ -70,7 +70,8 @@ export default function Editor({ rows }: { rows: Announcement[] }) {
         </div>
       </div>
 
-      <div className="card overflow-hidden">
+      <div className="card">
+        <div className="table-wrap">
         <table>
           <thead>
             <tr>
@@ -119,6 +120,7 @@ export default function Editor({ rows }: { rows: Announcement[] }) {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

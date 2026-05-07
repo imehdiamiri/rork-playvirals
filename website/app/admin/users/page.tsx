@@ -16,19 +16,20 @@ export default async function UsersPage({
 
   return (
     <Shell email={user.email}>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <h1 className="text-2xl font-semibold">Users</h1>
-        <form className="flex gap-2">
+        <form className="flex gap-2 w-full sm:w-auto">
           <input
             name="q"
             defaultValue={q}
             placeholder="Search username, email, id…"
-            className="input w-80"
+            className="input sm:w-80"
           />
           <button className="btn btn-primary">Search</button>
         </form>
       </div>
-      <div className="card overflow-hidden">
+      <div className="card">
+        <div className="table-wrap">
         <table>
           <thead>
             <tr>
@@ -82,6 +83,7 @@ export default async function UsersPage({
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </Shell>
   );
