@@ -256,23 +256,30 @@ export default function WheelToolScreen() {
           <Animated.View style={[{ width: wheelSize, height: wheelSize }, wheelAnimatedStyle]}>
             <Svg width={wheelSize} height={wheelSize} viewBox={`0 0 ${wheelSize} ${wheelSize}`}>
               <Defs>
-                <RadialGradient id="sheen" cx="50%" cy="50%" r="50%">
-                  <Stop offset="0%" stopColor="white" stopOpacity={0.18} />
-                  <Stop offset="60%" stopColor="white" stopOpacity={0} />
+                <RadialGradient id="sheen" cx="50%" cy="50%" r="55%">
+                  <Stop offset="0%" stopColor="white" stopOpacity={0.22} />
+                  <Stop offset="55%" stopColor="white" stopOpacity={0.04} />
+                  <Stop offset="100%" stopColor="black" stopOpacity={0.18} />
+                </RadialGradient>
+                <RadialGradient id="rim" cx="50%" cy="50%" r="50%">
+                  <Stop offset="88%" stopColor="#1B1D24" stopOpacity={1} />
+                  <Stop offset="100%" stopColor="#0A0B0F" stopOpacity={1} />
                 </RadialGradient>
               </Defs>
               <G>
+                {/* outer dark rim */}
+                <Circle cx={radius} cy={radius} r={radius - 1} fill="url(#rim)" />
                 {slices.map((s) => (
                   <Path
                     key={s.index}
-                    d={arcPath(radius, radius, radius - 4, s.startA, s.endA)}
+                    d={arcPath(radius, radius, radius - 14, s.startA, s.endA)}
                     fill={s.color}
-                    stroke="rgba(0,0,0,0.25)"
-                    strokeWidth={1}
+                    stroke="rgba(0,0,0,0.35)"
+                    strokeWidth={1.2}
                   />
                 ))}
-                {/* sheen overlay */}
-                <Circle cx={radius} cy={radius} r={radius - 4} fill="url(#sheen)" />
+                {/* sheen overlay over slices */}
+                <Circle cx={radius} cy={radius} r={radius - 14} fill="url(#sheen)" />
                 {/* labels */}
                 {slices.map((s) => {
                   const pos = polarToCartesian(radius, radius, labelRadius, s.midA);
@@ -292,35 +299,68 @@ export default function WheelToolScreen() {
                     </SvgText>
                   );
                 })}
-                {/* outer ring */}
+                {/* inner divider ring between slices and rim */}
                 <Circle
                   cx={radius}
                   cy={radius}
-                  r={radius - 3}
-                  stroke="rgba(255,255,255,0.18)"
-                  strokeWidth={2}
+                  r={radius - 13}
+                  stroke="rgba(255,255,255,0.35)"
+                  strokeWidth={1.5}
+                  fill="none"
+                />
+                {/* pegs around the rim — one per slice boundary, gives the wheel its real-world look */}
+                {slices.map((s) => {
+                  const peg = polarToCartesian(radius, radius, radius - 7, s.startA);
+                  return (
+                    <Circle
+                      key={`peg-${s.index}`}
+                      cx={peg.x}
+                      cy={peg.y}
+                      r={2.5}
+                      fill="#FFD66E"
+                      stroke="rgba(0,0,0,0.45)"
+                      strokeWidth={0.6}
+                    />
+                  );
+                })}
+                {/* outer highlight ring */}
+                <Circle
+                  cx={radius}
+                  cy={radius}
+                  r={radius - 1.5}
+                  stroke="rgba(255,255,255,0.12)"
+                  strokeWidth={1}
                   fill="none"
                 />
               </G>
             </Svg>
           </Animated.View>
 
-          {/* Center hub */}
-          <View style={[styles.hub, { left: radius - 22, top: radius - 22 }]}>
+          {/* Center hub — fixed axle, doesn't rotate with the wheel */}
+          <View style={[styles.hubOuter, { left: radius - 32, top: radius - 32 }]} pointerEvents="none">
             <LinearGradient
-              colors={['#FFFFFF', '#D0D0D8']}
+              colors={['#2A2D36', '#0F1014']}
               style={StyleSheet.absoluteFill}
             />
-            <IconSymbol name="sparkles" size={18} color={Colors.blue} weight="black" />
+            <View style={styles.hubInner}>
+              <LinearGradient
+                colors={['#F4F5F7', '#A8ACB7']}
+                start={{ x: 0.2, y: 0 }}
+                end={{ x: 0.8, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <IconSymbol name="sparkles" size={20} color={Colors.blue} weight="black" />
+            </View>
           </View>
 
-          {/* Pointer (top) — color tracks slice under pointer */}
-          <View style={[styles.pointer, { left: radius - 24 }]} pointerEvents="none">
-            <Animated.View style={[styles.pointerBase, pointerBaseAnimatedStyle]}>
-              <View style={styles.pointerInner} />
-            </Animated.View>
-            <Animated.View style={[styles.pointerTriangle, pointerAnimatedStyle]} />
-          </View>
+          {/* Pointer — inward-pointing arrow seated on the rim; color matches the slice under it */}
+          <Animated.View
+            style={[styles.pointerWrap, { left: radius - 26 }, pointerBaseAnimatedStyle]}
+            pointerEvents="none"
+          >
+            <Animated.View style={[styles.pointerArrow, pointerAnimatedStyle]} />
+            <View style={styles.pointerBolt} />
+          </Animated.View>
         </View>
 
         {/* Result */}
@@ -472,59 +512,77 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
-  hub: {
+  hubOuter: {
     position: 'absolute',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.6)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.55,
+        shadowRadius: 8,
+      },
+      android: { elevation: 12 },
+      default: {},
+    }),
+  },
+  hubInner: {
     width: 44,
     height: 44,
     borderRadius: 22,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(0,0,0,0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.3)',
   },
-  pointer: {
+  pointerWrap: {
     position: 'absolute',
-    top: -18,
-    width: 48,
+    top: -10,
+    width: 52,
+    height: 60,
+    borderRadius: 14,
     alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 8,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.5,
-        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.55,
+        shadowRadius: 8,
       },
-      android: { elevation: 10 },
+      android: { elevation: 12 },
       default: {},
     }),
   },
-  pointerBase: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'white',
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.95)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pointerInner: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-  },
-  pointerTriangle: {
+  pointerArrow: {
+    position: 'absolute',
+    bottom: -2,
     width: 0,
     height: 0,
-    borderLeftWidth: 16,
-    borderRightWidth: 16,
-    borderTopWidth: 26,
+    borderLeftWidth: 18,
+    borderRightWidth: 18,
+    borderTopWidth: 28,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderTopColor: 'white',
-    marginTop: -4,
+  },
+  pointerBolt: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.7)',
+    marginTop: 6,
   },
   resultArea: {
     marginTop: 18,

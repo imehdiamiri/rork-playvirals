@@ -133,30 +133,37 @@ export function ReactionTimeSession({ session }: Props) {
 
   // ─── READY ───
   if (phase === 'ready') {
+    const isFirstPlayer = playerIdx === 0;
     return (
       <View style={st.container}>
         <ScrollView contentContainerStyle={st.readyContent}>
           <View style={[st.iconBox, { backgroundColor: 'rgba(52,199,89,0.15)' }]}>
             <IconSymbol name="bolt.fill" size={56} color={Colors.green} />
           </View>
-          <Text style={st.title}>Reaction Time</Text>
-          {players.length > 1 ? (
-            <View style={st.pill}>
-              <Text style={st.pillTx}>Now playing · {player?.displayName}</Text>
-            </View>
-          ) : null}
-
-          <View style={st.rulesCard}>
-            <RuleRow num={1} color={Colors.red} text="When the screen turns RED, get ready — but don't tap yet!" />
-            <RuleRow num={2} color={Colors.green} text="Wait for the screen to turn GREEN, then tap as fast as you can." />
-            <RuleRow num={3} color="#5AC8FA" text="Your reaction time is measured in milliseconds — lower is better!" />
-            <RuleRow num={4} color={Colors.orange} text="If you tap too early (while red), it's a foul and that attempt scores zero." />
-            <RuleRow num={5} color="#AF52DE" text={`Each player gets ${ATTEMPTS_PER_PLAYER} attempts — the best time counts.`} />
+          <Text style={st.eyebrow}>{isFirstPlayer ? 'REACTION TIME' : `PLAYER ${playerIdx + 1} OF ${players.length}`}</Text>
+          <Text style={st.nameTitle} numberOfLines={2}>{player?.displayName ?? 'Player'}</Text>
+          <View style={st.pill}>
+            <Text style={st.pillTx}>Are you ready?</Text>
           </View>
+
+          {isFirstPlayer ? (
+            <View style={st.rulesCard}>
+              <RuleRow num={1} color={Colors.red} text="When the screen turns RED, get ready — but don't tap yet!" />
+              <RuleRow num={2} color={Colors.green} text="Wait for the screen to turn GREEN, then tap as fast as you can." />
+              <RuleRow num={3} color="#5AC8FA" text="Your reaction time is measured in milliseconds — lower is better!" />
+              <RuleRow num={4} color={Colors.orange} text="If you tap too early (while red), it's a foul and that attempt scores zero." />
+              <RuleRow num={5} color="#AF52DE" text={`Each player gets ${ATTEMPTS_PER_PLAYER} attempts — the best time counts.`} />
+            </View>
+          ) : (
+            <View style={st.handoffCard}>
+              <IconSymbol name="hand.raised.fill" size={22} color={Colors.cyan} />
+              <Text style={st.handoffTx}>Pass the phone to {player?.displayName}. Tap below when you're ready to start your turn.</Text>
+            </View>
+          )}
 
           <Pressable style={[st.startBtn, { backgroundColor: Colors.green }]} onPress={beginAttempt}>
             <IconSymbol name="play.fill" size={18} color="#fff" />
-            <Text style={st.startBtnTx}>Start{players.length > 1 ? ` · ${player?.displayName}` : ''}</Text>
+            <Text style={st.startBtnTx}>I'm Ready</Text>
           </Pressable>
         </ScrollView>
       </View>
@@ -367,6 +374,35 @@ const st = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   title: { color: '#fff', fontSize: 28, fontWeight: 'bold', textAlign: 'center' },
+  eyebrow: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 2.4,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  nameTitle: {
+    color: '#fff',
+    fontSize: 34,
+    fontWeight: '900',
+    textAlign: 'center',
+    letterSpacing: 0.3,
+    paddingHorizontal: 8,
+  },
+  handoffCard: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(90,200,250,0.10)',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(90,200,250,0.25)',
+    marginTop: 8,
+  },
+  handoffTx: { flex: 1, color: 'rgba(255,255,255,0.85)', fontSize: 14, lineHeight: 19, fontWeight: '600' },
   sub: { color: 'rgba(255,255,255,0.6)', fontSize: 15, textAlign: 'center' },
   pill: {
     backgroundColor: 'rgba(52,199,89,0.15)',
