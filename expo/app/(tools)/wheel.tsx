@@ -19,9 +19,12 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withSequence,
   Easing,
   runOnJS,
   cancelAnimation,
+  useAnimatedReaction,
+  interpolateColor,
 } from 'react-native-reanimated';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { AudioManager } from '@/src/services/AudioManager';
@@ -74,7 +77,9 @@ export default function WheelToolScreen() {
   const [winner, setWinner] = useState<string | null>(null);
 
   const rotation = useSharedValue<number>(0);
+  const pointerColorIndex = useSharedValue<number>(-1);
   const inputRef = useRef<TextInput>(null);
+  const tensionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sliceAngle = options.length > 0 ? 360 / options.length : 360;
 
@@ -134,7 +139,11 @@ export default function WheelToolScreen() {
     const result = options[winnerIndex] ?? options[0];
     setWinner(result);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    AudioManager.play('success');
+    AudioManager.play('match');
+  };
+
+  const onPointerTick = () => {
+    Haptics.selectionAsync();
   };
 
   const spin = () => {
@@ -143,28 +152,93 @@ export default function WheelToolScreen() {
     setWinner(null);
     setIsSpinning(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    AudioManager.play('tileFlip');
+    AudioManager.play('bottleSpin');
 
     cancelAnimation(rotation);
-    const fullTurns = 5 + Math.floor(Math.random() * 4); // 5..8
-    const randomOffset = Math.random() * 360;
-    const target = rotation.value + fullTurns * 360 + randomOffset;
-    const duration = 4200 + Math.floor(Math.random() * 800);
+    if (tensionTimerRef.current) {
+      clearTimeout(tensionTimerRef.current);
+      tensionTimerRef.current = null;
+    }
 
-    rotation.value = withTiming(
-      target,
-      { duration, easing: Easing.out(Easing.cubic) },
-      (finished) => {
-        if (finished) {
-          runOnJS(onSpinComplete)(target);
-        }
-      },
+    // Two-phase spin: a quick wind-up, then a long suspenseful slow-down.
+    // Aggressive ease-out makes the final slice unpredictable and dramatic.
+    const fastTurns = 6 + Math.floor(Math.random() * 3); // 6..8 fast turns
+    const slowExtra = 1.5 * 360 + Math.random() * 360; // 1.5..2.5 final turns
+    const fastDuration = 1500;
+    const slowDuration = 5500 + Math.floor(Math.random() * 1500); // 5.5..7s slow phase
+    const totalDuration = fastDuration + slowDuration;
+
+    const fastTarget = rotation.value + fastTurns * 360;
+    const finalTarget = fastTarget + slowExtra;
+
+    // Schedule the tension cue ~1.4s before stop, when slices visibly crawl.
+    tensionTimerRef.current = setTimeout(() => {
+      AudioManager.play('countdownFinal');
+    }, totalDuration - 1400);
+
+    rotation.value = withSequence(
+      withTiming(fastTarget, {
+        duration: fastDuration,
+        easing: Easing.in(Easing.cubic),
+      }),
+      withTiming(
+        finalTarget,
+        { duration: slowDuration, easing: Easing.out(Easing.exp) },
+        (finished) => {
+          if (finished) {
+            runOnJS(onSpinComplete)(finalTarget);
+          }
+        },
+      ),
     );
   };
 
   const wheelAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],
   }));
+
+  // Sample which slice is under the pointer on the UI thread; bridge only when it changes.
+  useAnimatedReaction(
+    () => {
+      const normalized = ((rotation.value % 360) + 360) % 360;
+      const pointerAngle = (360 - normalized) % 360;
+      return Math.floor(pointerAngle / sliceAngle) % Math.max(1, options.length);
+    },
+    (idx, prev) => {
+      if (idx !== prev) {
+        pointerColorIndex.value = idx;
+        runOnJS(onPointerTick)();
+      }
+    },
+    [sliceAngle, options.length],
+  );
+
+  const pointerAnimatedStyle = useAnimatedStyle(() => {
+    const i = pointerColorIndex.value;
+    if (i < 0 || i >= slices.length) {
+      return { borderTopColor: 'white' as const };
+    }
+    // interpolateColor with a 2-point [i, i] stop returns the color cleanly on UI thread.
+    const color = interpolateColor(
+      i,
+      [i - 0.0001, i],
+      [slices[i].color, slices[i].color],
+    );
+    return { borderTopColor: color };
+  });
+
+  const pointerBaseAnimatedStyle = useAnimatedStyle(() => {
+    const i = pointerColorIndex.value;
+    if (i < 0 || i >= slices.length) {
+      return { backgroundColor: 'white' as const };
+    }
+    const color = interpolateColor(
+      i,
+      [i - 0.0001, i],
+      [slices[i].color, slices[i].color],
+    );
+    return { backgroundColor: color };
+  });
 
   const fontSize = options.length > 16 ? 9 : options.length > 10 ? 11 : options.length > 6 ? 12 : 14;
   const labelRadius = radius * 0.62;
@@ -241,10 +315,10 @@ export default function WheelToolScreen() {
             <IconSymbol name="sparkles" size={18} color={Colors.blue} weight="black" />
           </View>
 
-          {/* Pointer (top) */}
-          <View style={[styles.pointer, { left: radius - 14 }]}>
-            <View style={styles.pointerTriangle} />
-            <View style={styles.pointerBase} />
+          {/* Pointer (top) — color tracks slice under pointer */}
+          <View style={[styles.pointer, { left: radius - 14 }]} pointerEvents="none">
+            <Animated.View style={[styles.pointerTriangle, pointerAnimatedStyle]} />
+            <Animated.View style={[styles.pointerBase, pointerBaseAnimatedStyle]} />
           </View>
         </View>
 
