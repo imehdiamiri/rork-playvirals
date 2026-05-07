@@ -74,6 +74,7 @@ export default function WheelToolScreen() {
   const [draft, setDraft] = useState<string>('');
   const [isSpinning, setIsSpinning] = useState<boolean>(false);
   const [winner, setWinner] = useState<string | null>(null);
+  const [removeAfterSpin, setRemoveAfterSpin] = useState<boolean>(false);
 
   const rotation = useSharedValue<number>(0);
   const pointerColorIndex = useSharedValue<number>(-1);
@@ -139,6 +140,11 @@ export default function WheelToolScreen() {
     setWinner(result);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     AudioManager.play('match');
+    if (removeAfterSpin && options.length > MIN_OPTIONS) {
+      setTimeout(() => {
+        setOptions((prev) => prev.filter((_, i) => i !== winnerIndex));
+      }, 1200);
+    }
   };
 
   const onPointerTick = () => {
@@ -323,6 +329,7 @@ export default function WheelToolScreen() {
           <Text style={[styles.resultValue, isSpinning && { opacity: 0.4 }]} numberOfLines={1}>
             {winner ?? '—'}
           </Text>
+          <Text style={styles.hintText}>The highlighted segment at the pointer shows the winner.</Text>
         </View>
       </View>
 
@@ -345,6 +352,26 @@ export default function WheelToolScreen() {
           <IconSymbol name="arrow.triangle.2.circlepath" size={18} color="white" weight="heavy" />
           <Text style={styles.spinBtnText}>{isSpinning ? 'Spinning…' : 'Spin'}</Text>
         </LinearGradient>
+      </Pressable>
+
+      {/* Remove-winner toggle */}
+      <Pressable
+        onPress={() => {
+          setRemoveAfterSpin((v) => !v);
+          Haptics.selectionAsync();
+        }}
+        disabled={isSpinning}
+        style={({ pressed }) => [styles.toggleRow, pressed && { opacity: 0.8 }]}
+      >
+        <View style={[styles.toggleBox, removeAfterSpin && styles.toggleBoxOn]}>
+          {removeAfterSpin ? (
+            <IconSymbol name="checkmark" size={12} color="white" weight="black" />
+          ) : null}
+        </View>
+        <View style={styles.toggleTextWrap}>
+          <Text style={styles.toggleTitle}>Remove winner after spin</Text>
+          <Text style={styles.toggleSub}>Optionally enable to avoid repeats.</Text>
+        </View>
       </Pressable>
 
       {/* Add option */}
@@ -510,6 +537,52 @@ const styles = StyleSheet.create({
     letterSpacing: 2.2,
     color: 'rgba(255,255,255,0.55)',
     marginBottom: 4,
+  },
+  hintText: {
+    marginTop: 10,
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.45)',
+    textAlign: 'center',
+    letterSpacing: 0.3,
+    maxWidth: 320,
+    paddingHorizontal: 8,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 18,
+    width: '100%',
+    marginBottom: 14,
+  },
+  toggleBox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toggleBoxOn: {
+    backgroundColor: Colors.blue,
+    borderColor: Colors.blue,
+  },
+  toggleTextWrap: {
+    flex: 1,
+  },
+  toggleTitle: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  toggleSub: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 1,
   },
   resultValue: {
     fontSize: 30,
