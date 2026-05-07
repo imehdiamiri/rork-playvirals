@@ -62,7 +62,7 @@ export const Games: Record<string, GameType> = {
     symbolName: 'backward.fill', // SF: backward.fill
     supportedModes: [GameMode.singleDevice],
     roundDuration: 75,
-    heroImageURL: 'https://r2-pub.rork.com/generated-images/b17e5d76-7bf4-46aa-b32c-34db233473bd.png',
+    heroImageURL: 'https://r2-pub.rork.com/generated-images/c79b67d6-4227-497f-ac8b-2b5ae957f482.png',
   },
   guessTheSeconds: {
     id: 'guess_the_seconds',
@@ -78,7 +78,7 @@ export const Games: Record<string, GameType> = {
     // Real multiplayer is implemented via useGameSync (host-authoritative reducer).
     supportedModes: [GameMode.singleDevice, GameMode.multiDevice],
     roundDuration: 90,
-    heroImageURL: 'https://r2-pub.rork.com/generated-images/d8092484-fefa-4921-9732-636c97a59a09.png',
+    heroImageURL: 'https://r2-pub.rork.com/generated-images/3c1a229e-631c-4cc9-992f-c2fcc9ff2042.png',
   },
   tenTangle: {
     id: 'ten_tangle',
@@ -87,13 +87,13 @@ export const Games: Record<string, GameType> = {
     minPlayers: 3,
     maxPlayers: 11,
     unlockCostStars: 0,
-    isFreeForever: false,
+    isFreeForever: true,
     hasFreeTrial: false,
-    isPremium: true,
+    isPremium: false,
     symbolName: 'theatermasks.fill', // SF: theatermasks.fill
     supportedModes: [GameMode.singleDevice],
     roundDuration: 0,
-    heroImageURL: 'https://r2-pub.rork.com/generated-images/e877a51b-281e-4b8c-bb95-823ae44216f1.png',
+    heroImageURL: 'https://r2-pub.rork.com/generated-images/e4e1fe0b-b90e-448c-8931-19e0d5a14d2e.png',
   },
   imposter: {
     id: 'imposter',
@@ -108,7 +108,7 @@ export const Games: Record<string, GameType> = {
     symbolName: 'eye.fill', // SF: eye.fill
     supportedModes: [GameMode.singleDevice],
     roundDuration: 0,
-    heroImageURL: 'https://r2-pub.rork.com/generated-images/01a6d899-88d4-4d01-8758-7dd451fd48da.png',
+    heroImageURL: 'https://r2-pub.rork.com/generated-images/dcf026c3-8a22-42f7-ba95-09f14ff49a3c.png',
   },
   memoryGrid: {
     id: 'memory_grid',
@@ -125,7 +125,7 @@ export const Games: Record<string, GameType> = {
     // to stop advertising fake flows.
     supportedModes: [GameMode.singleDevice, GameMode.multiDevice],
     roundDuration: 0,
-    heroImageURL: 'https://r2-pub.rork.com/generated-images/630d9ac5-1895-4593-9ea2-7cd581f42ce6.png',
+    heroImageURL: 'https://r2-pub.rork.com/generated-images/9dc2b374-b122-4384-9206-38ed6ec8c147.png',
   },
   memoryPath: {
     id: 'memory_path',
@@ -134,14 +134,14 @@ export const Games: Record<string, GameType> = {
     minPlayers: 2,
     maxPlayers: 30,
     unlockCostStars: 0,
-    isFreeForever: false,
+    isFreeForever: true,
     hasFreeTrial: false,
-    isPremium: true,
+    isPremium: false,
     symbolName: 'map.fill', // SF: map.fill
     // Single-device only until proper multi-device sync ships.
     supportedModes: [GameMode.singleDevice],
     roundDuration: 0,
-    heroImageURL: 'https://r2-pub.rork.com/generated-images/8f997aac-f4e2-46f7-92d6-aa55f8b197ff.png',
+    heroImageURL: 'https://r2-pub.rork.com/generated-images/8ce364b4-43c8-40c8-bf2b-61df1d510ad7.png',
   },
   tapInOrder: {
     id: 'tap_in_order',
@@ -150,9 +150,9 @@ export const Games: Record<string, GameType> = {
     minPlayers: 1,
     maxPlayers: 30,
     unlockCostStars: 0,
-    isFreeForever: false,
+    isFreeForever: true,
     hasFreeTrial: false,
-    isPremium: true,
+    isPremium: false,
     symbolName: 'number.square.fill', // SF: number.square.fill -> roughly 123
     // Single-device only — multi-device sync not implemented for this game.
     supportedModes: [GameMode.singleDevice],
@@ -166,9 +166,9 @@ export const Games: Record<string, GameType> = {
     minPlayers: 1,
     maxPlayers: 30,
     unlockCostStars: 0,
-    isFreeForever: false,
+    isFreeForever: true,
     hasFreeTrial: false,
-    isPremium: true,
+    isPremium: false,
     symbolName: 'paintpalette.fill', // SF: paintpalette.fill
     // Single-device only — multi-device sync not implemented for this game.
     supportedModes: [GameMode.singleDevice],
@@ -182,13 +182,13 @@ export const Games: Record<string, GameType> = {
     minPlayers: 2,
     maxPlayers: 30,
     unlockCostStars: 0,
-    isFreeForever: false,
+    isFreeForever: true,
     hasFreeTrial: false,
-    isPremium: true,
+    isPremium: false,
     symbolName: 'text.bubble.fill', // SF: text.bubble.fill
     supportedModes: [GameMode.singleDevice],
     roundDuration: 0,
-    heroImageURL: 'https://r2-pub.rork.com/generated-images/9501d164-3c05-4a45-9d4e-51ffe0fd7aca.png',
+    heroImageURL: 'https://r2-pub.rork.com/generated-images/320ededb-cec7-4fa6-8da4-3cce67685fea.png',
   },
   spinBottle: {
     id: 'spin_bottle',
@@ -227,9 +227,9 @@ export const Games: Record<string, GameType> = {
     minPlayers: 2,
     maxPlayers: 12,
     unlockCostStars: 0,
-    isFreeForever: false,
+    isFreeForever: true,
     hasFreeTrial: false,
-    isPremium: true,
+    isPremium: false,
     symbolName: 'pencil.and.scribble', // SF: pencil.and.scribble
     // Single-device only — the multi-device draft is not wired into useGameSync
     // and was removed from supported modes to avoid dead lobby flows.

@@ -13,7 +13,6 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -30,134 +29,193 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { AppBackgroundView } from '@/src/components/AppBackgroundView';
-import { GlowView } from '@/src/components/ui/GlowView';
 import { useSettingsStore } from '@/src/store/useSettingsStore';
-import { Colors } from '@/src/theme/Colors';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const PAGES = [0, 1, 2, 3] as const;
-
 type PageIndex = 0 | 1 | 2 | 3;
 
 const ART = {
-  bored: 'https://r2-pub.rork.com/generated-images/5746847c-ddaf-4c79-919a-eeca4bfa881f.png',
-  party: 'https://r2-pub.rork.com/generated-images/1f87632d-1791-4a06-b199-18f99f5a3f92.png',
-  portrait: 'https://r2-pub.rork.com/generated-images/5a1f6303-d6b8-49d2-ace6-d16b4c8cdc3c.png',
-  hero: 'https://r2-pub.rork.com/generated-images/1886dd17-1900-458d-a034-a1ae1ddce6e1.png',
+  bored: 'https://r2-pub.rork.com/generated-images/ba33a05c-abff-486d-9e1d-0d3ed5f83aed.png',
+  party: 'https://r2-pub.rork.com/generated-images/66b3a840-d10e-4a87-9f3b-289a24ad85a3.png',
+  portrait: 'https://r2-pub.rork.com/generated-images/7e778e35-51c7-4377-8b20-29bb47f98f1a.png',
+  hero: 'https://r2-pub.rork.com/generated-images/8c8fd684-25b2-46f3-a9fc-1c50dd368d01.png',
 } as const;
 
-function EnterStage({ active, delay = 0, children, style }: { active: boolean; delay?: number; children: React.ReactNode; style?: any }) {
-  const progress = useSharedValue(active ? 1 : 0);
+const INK = '#111111';
+const CREAM = '#FFF7E1';
+const YELLOW = '#FFD60A';
+const PINK = '#FF2D55';
+const GREEN = '#30D158';
+const BLUE = '#0A84FF';
 
-  useEffect(() => {
-    progress.value = active
-      ? withDelay(delay, withSpring(1, { damping: 15, stiffness: 120 }))
-      : withTiming(0, { duration: 160 });
-  }, [active, delay, progress]);
+type PageTheme = {
+  bg: string;
+  accent: string;
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  art: string;
+  rotate: number;
+};
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [
-      { translateY: interpolate(progress.value, [0, 1], [28, 0], Extrapolate.CLAMP) },
-      { scale: interpolate(progress.value, [0, 1], [0.94, 1], Extrapolate.CLAMP) },
-    ],
-  }));
+const THEMES: PageTheme[] = [
+  { bg: YELLOW, accent: PINK, eyebrow: 'THE SILENCE IS REAL', title: 'Hangouts going\nflat already?', subtitle: "Phones dead. Vibes deader. We've all been there.", art: ART.bored, rotate: -3 },
+  { bg: GREEN, accent: PINK, eyebrow: 'ENTER PARTYBOT', title: "We came to\nblow up\nthe room", subtitle: 'Quick, loud party games — ready in seconds.', art: ART.party, rotate: 2.5 },
+  { bg: PINK, accent: YELLOW, eyebrow: "WHAT'S YOUR NAME?", title: 'Slap your\nname on it', subtitle: 'This is going on the leaderboard, so spell it right.', art: ART.portrait, rotate: -2 },
+  { bg: BLUE, accent: YELLOW, eyebrow: 'SUIT UP', title: 'Ready to\nown the room?', subtitle: 'Drop the first game and watch the room light up.', art: ART.hero, rotate: 3 },
+];
 
-  return <Animated.View style={[style, animatedStyle]}>{children}</Animated.View>;
-}
-
-function FloatingArt({ active, source, glowColor, compact }: { active: boolean; source: string; glowColor: string; compact?: boolean }) {
+/** Halftone dot pattern + chunky frame backdrop drawn behind hero art for that printed-zine vibe. */
+function StickerStage({ active, art, rotate, frameColor }: { active: boolean; art: string; rotate: number; frameColor: string }) {
+  const enter = useSharedValue(0);
   const float = useSharedValue(0);
 
   useEffect(() => {
     if (active) {
+      enter.value = withSpring(1, { damping: 12, stiffness: 110 });
       float.value = withRepeat(
-        withSequence(withTiming(1, { duration: 2200 }), withTiming(0, { duration: 2200 })),
+        withSequence(withTiming(1, { duration: 2400 }), withTiming(0, { duration: 2400 })),
         -1,
         true,
       );
     } else {
+      enter.value = withTiming(0, { duration: 180 });
       float.value = 0;
     }
-  }, [active, float]);
+  }, [active, enter, float]);
 
-  const floatStyle = useAnimatedStyle(() => ({
+  const frameStyle = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [
+      { scale: interpolate(enter.value, [0, 1], [0.85, 1], Extrapolate.CLAMP) },
+      { rotate: `${interpolate(enter.value, [0, 1], [rotate * 2, rotate], Extrapolate.CLAMP)}deg` },
+    ],
+  }));
+
+  const artStyle = useAnimatedStyle(() => ({
     transform: [
       { translateY: interpolate(float.value, [0, 1], [-6, 6], Extrapolate.CLAMP) },
       { rotate: `${interpolate(float.value, [0, 1], [-1.5, 1.5], Extrapolate.CLAMP)}deg` },
     ],
   }));
 
-  const stageStyle = compact ? styles.artStageCompact : styles.artStage;
-  const imgStyle = compact ? styles.artImageCompact : styles.artImage;
-  const glowSize = compact ? 200 : 320;
-
   return (
-    <EnterStage active={active}>
-      <View style={stageStyle}>
-        <GlowView color={glowColor} size={glowSize} style={styles.artGlow} />
-        <Animated.View style={floatStyle}>
-          <Image source={{ uri: source }} style={imgStyle} resizeMode="contain" />
+    <Animated.View style={[styles.stickerWrap, frameStyle]}>
+      <View style={[styles.stickerShadow, { backgroundColor: INK }]} />
+      <View style={[styles.stickerFrame, { backgroundColor: frameColor }]}>
+        <View style={styles.dotPattern} pointerEvents="none">
+          {Array.from({ length: 7 * 7 }).map((_, i) => (
+            <View key={i} style={styles.dot} />
+          ))}
+        </View>
+        <Animated.View style={[styles.artHolder, artStyle]}>
+          <Image source={{ uri: art }} style={styles.artImage} resizeMode="contain" />
         </Animated.View>
       </View>
-    </EnterStage>
+    </Animated.View>
   );
 }
 
-function HeroArt({ active, name }: { active: boolean; name: string }) {
+function HeroStage({ active, name }: { active: boolean; name: string }) {
   const float = useSharedValue(0);
-  const heroName = name.trim() || 'Hero';
+  const enter = useSharedValue(0);
+  const heroName = name.trim() || 'HERO';
 
   useEffect(() => {
     if (active) {
+      enter.value = withSpring(1, { damping: 12, stiffness: 110 });
       float.value = withRepeat(
         withSequence(withTiming(1, { duration: 1800 }), withTiming(0, { duration: 1800 })),
         -1,
         true,
       );
     } else {
+      enter.value = withTiming(0, { duration: 180 });
       float.value = 0;
     }
-  }, [active, float]);
+  }, [active, enter, float]);
 
-  const floatStyle = useAnimatedStyle(() => ({
+  const frameStyle = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [
+      { scale: interpolate(enter.value, [0, 1], [0.85, 1], Extrapolate.CLAMP) },
+      { rotate: `${interpolate(enter.value, [0, 1], [6, 3], Extrapolate.CLAMP)}deg` },
+    ],
+  }));
+
+  const artStyle = useAnimatedStyle(() => ({
     transform: [
       { translateY: interpolate(float.value, [0, 1], [-8, 4], Extrapolate.CLAMP) },
-      { scale: interpolate(float.value, [0, 1], [0.99, 1.02], Extrapolate.CLAMP) },
     ],
   }));
 
   const badgeStyle = useAnimatedStyle(() => ({
     transform: [
-      { rotate: `${interpolate(float.value, [0, 1], [-3, 3], Extrapolate.CLAMP)}deg` },
+      { rotate: `${interpolate(float.value, [0, 1], [-4, 4], Extrapolate.CLAMP)}deg` },
       { scale: interpolate(float.value, [0, 1], [0.96, 1.04], Extrapolate.CLAMP) },
     ],
   }));
 
   return (
-    <EnterStage active={active}>
-      <View style={styles.artStage}>
-        <GlowView color="rgba(255, 45, 85, 0.32)" size={260} style={styles.artGlow} />
-        <Animated.View style={floatStyle}>
+    <Animated.View style={[styles.stickerWrap, frameStyle]}>
+      <View style={[styles.stickerShadow, { backgroundColor: INK }]} />
+      <View style={[styles.stickerFrame, { backgroundColor: YELLOW }]}>
+        <View style={styles.dotPattern} pointerEvents="none">
+          {Array.from({ length: 7 * 7 }).map((_, i) => <View key={i} style={styles.dot} />)}
+        </View>
+        <Animated.View style={[styles.artHolder, artStyle]}>
           <Image source={{ uri: ART.hero }} style={styles.artImage} resizeMode="contain" />
         </Animated.View>
-        <View style={styles.heroNameBadge} pointerEvents="none">
-          <Animated.View style={[styles.heroNameBadgeInner, badgeStyle]}>
-            <Text style={styles.heroNameText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{heroName.toUpperCase()}</Text>
-          </Animated.View>
-        </View>
+        <Animated.View style={[styles.heroBadge, badgeStyle]} pointerEvents="none">
+          <View style={styles.heroBadgeShadow} />
+          <View style={styles.heroBadgeInner}>
+            <Text style={styles.heroBadgeText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
+              {heroName.toUpperCase()}
+            </Text>
+          </View>
+        </Animated.View>
       </View>
-    </EnterStage>
+    </Animated.View>
   );
 }
 
-function IndicatorDot({ index, scrollX }: { index: number; scrollX: Animated.SharedValue<number> }) {
+function IndicatorBar({ index, scrollX }: { index: number; scrollX: Animated.SharedValue<number> }) {
   const animatedStyle = useAnimatedStyle(() => ({
-    width: interpolate(scrollX.value, [(index - 1) * SCREEN_WIDTH, index * SCREEN_WIDTH, (index + 1) * SCREEN_WIDTH], [8, 30, 8], Extrapolate.CLAMP),
-    opacity: interpolate(scrollX.value, [(index - 1) * SCREEN_WIDTH, index * SCREEN_WIDTH, (index + 1) * SCREEN_WIDTH], [0.3, 1, 0.3], Extrapolate.CLAMP),
+    width: interpolate(scrollX.value, [(index - 1) * SCREEN_WIDTH, index * SCREEN_WIDTH, (index + 1) * SCREEN_WIDTH], [16, 44, 16], Extrapolate.CLAMP),
+    opacity: interpolate(scrollX.value, [(index - 1) * SCREEN_WIDTH, index * SCREEN_WIDTH, (index + 1) * SCREEN_WIDTH], [0.35, 1, 0.35], Extrapolate.CLAMP),
   }));
   return <Animated.View style={[styles.indicator, animatedStyle]} />;
+}
+
+function PageBackground({ scrollX }: { scrollX: Animated.SharedValue<number> }) {
+  const animated = useAnimatedStyle(() => {
+    const progress = scrollX.value / SCREEN_WIDTH;
+    const colors = THEMES.map(t => t.bg);
+    const idx = Math.max(0, Math.min(colors.length - 2, Math.floor(progress)));
+    const f = Math.max(0, Math.min(1, progress - idx));
+    // We can't interpolate colors easily without runOnJS; just snap with a fade ribbon overlay below.
+    return { opacity: 1 - f * 0 };
+  });
+  return (
+    <Animated.View style={[StyleSheet.absoluteFill, animated]}>
+      {THEMES.map((t, i) => (
+        <ColorPanel key={i} index={i} scrollX={scrollX} color={t.bg} />
+      ))}
+    </Animated.View>
+  );
+}
+
+function ColorPanel({ index, scrollX, color }: { index: number; scrollX: Animated.SharedValue<number>; color: string }) {
+  const a = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollX.value,
+      [(index - 1) * SCREEN_WIDTH, index * SCREEN_WIDTH, (index + 1) * SCREEN_WIDTH],
+      [0, 1, 0],
+      Extrapolate.CLAMP,
+    ),
+  }));
+  return <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: color }, a]} />;
 }
 
 export default function OnboardingScreen() {
@@ -180,10 +238,7 @@ export default function OnboardingScreen() {
     const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
     const showSub = Keyboard.addListener(showEvt, (_e: KeyboardEvent) => setKeyboardVisible(true));
     const hideSub = Keyboard.addListener(hideEvt, () => setKeyboardVisible(false));
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
+    return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
   const scrollHandler = useAnimatedScrollHandler({
@@ -209,12 +264,14 @@ export default function OnboardingScreen() {
   }, [name, router, setHasCompletedOnboarding, setPlayerName]);
 
   const isNameValid = name.trim().length >= 2;
+  const onLastPage = currentPage === 3;
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
-          <AppBackgroundView />
+          <PageBackground scrollX={scrollX} />
+
           <Animated.ScrollView
             ref={scrollViewRef}
             horizontal
@@ -226,106 +283,55 @@ export default function OnboardingScreen() {
             keyboardShouldPersistTaps="handled"
             onMomentumScrollEnd={(event) => setCurrentPage(Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH) as PageIndex)}
           >
-            <OnboardPage
-              active={currentPage === 0}
-              eyebrow="THE SILENCE IS REAL"
-              title={'Hangout going\nflat already?'}
-              subtitle="Phones dead, vibes deader. We've all been there."
-            >
-              <FloatingArt active={currentPage === 0} source={ART.bored} glowColor="rgba(255, 159, 10, 0.42)" />
-            </OnboardPage>
-
-            <OnboardPage
-              active={currentPage === 1}
-              eyebrow="ENTER PARTYBOT"
-              title={'We came to\nblow up the room'}
-              subtitle="Quick, hilarious party games — ready to go in seconds."
-            >
-              <FloatingArt active={currentPage === 1} source={ART.party} glowColor="rgba(48, 209, 88, 0.45)" />
-            </OnboardPage>
-
-            <View style={styles.page}>
-              <EnterStage active={currentPage === 2} delay={60}>
-                <View style={styles.idCard}>
-                  <View style={styles.idCardTopBar}>
-                    <Text style={styles.idCardBrand}>PARTYBOT</Text>
-                    <Text style={styles.idCardBrandSub}>OFFICIAL ID</Text>
+            {THEMES.map((theme, i) => (
+              <View key={i} style={styles.page}>
+                <View style={styles.brandRow}>
+                  <View style={[styles.brandPill, { backgroundColor: INK }]}>
+                    <Text style={styles.brandText}>PARTY<Text style={{ color: theme.bg }}>BOT</Text></Text>
                   </View>
-                  <View style={styles.idCardBody}>
-                    <View style={styles.idCardPhotoFrame}>
-                      <Image source={{ uri: ART.portrait }} style={styles.idCardPhoto} resizeMode="cover" />
-                    </View>
-                    <View style={styles.idCardFields}>
-                      <Text style={styles.idCardFieldLabel}>NAME</Text>
-                      <TextInput
-                        ref={inputRef}
-                        value={name}
-                        onChangeText={setName}
-                        placeholder="YOUR NAME"
-                        placeholderTextColor="rgba(0,0,0,0.25)"
-                        style={styles.idCardInput}
-                        autoCapitalize="characters"
-                        autoCorrect={false}
-                        returnKeyType="done"
-                        onSubmitEditing={Keyboard.dismiss}
-                        maxLength={14}
-                      />
-                      <View style={styles.idCardUnderline} />
-                      <View style={styles.idCardMetaRow}>
-                        <View style={styles.idCardMetaCol}>
-                          <Text style={styles.idCardMetaLabel}>ROLE</Text>
-                          <Text style={styles.idCardMetaValue}>PARTY HERO</Text>
-                        </View>
-                        <View style={styles.idCardMetaCol}>
-                          <Text style={styles.idCardMetaLabel}>ID</Text>
-                          <Text style={styles.idCardMetaValue}>#001</Text>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-                  <View style={styles.idCardBottomStripe} />
+                  {i < 3 && (
+                    <Pressable onPress={() => goToPage(3)} hitSlop={12}>
+                      <Text style={styles.skipText}>SKIP</Text>
+                    </Pressable>
+                  )}
                 </View>
-              </EnterStage>
-              {!keyboardVisible && (
-                <EnterStage active={currentPage === 2} delay={180}>
-                  <View style={[styles.copyCard, { marginTop: 22 }]}>
-                    <Text style={styles.eyebrow}>WHAT&apos;S YOUR NAME?</Text>
-                    <Text style={styles.subtitle}>Tap the card to fill in your party ID.</Text>
-                  </View>
-                </EnterStage>
-              )}
-            </View>
 
-            <OnboardPage
-              active={currentPage === 3}
-              eyebrow="SUIT UP"
-              title={`Ready to own\nthe room, ${name.trim() || 'hero'}?`}
-              subtitle="Time to drop the first game and watch the room light up."
-            >
-              <HeroArt active={currentPage === 3} name={name} />
-            </OnboardPage>
+                <View style={styles.stageWrap}>
+                  {i === 3
+                    ? <HeroStage active={currentPage === 3} name={name} />
+                    : i === 2
+                      ? <NameSticker active={currentPage === 2} name={name} setName={setName} inputRef={inputRef} />
+                      : <StickerStage active={currentPage === i} art={theme.art} rotate={theme.rotate} frameColor={theme.accent} />}
+                </View>
+
+                {!(i === 2 && keyboardVisible) && (
+                  <CopyBlock active={currentPage === i} eyebrow={theme.eyebrow} title={theme.title} subtitle={theme.subtitle} />
+                )}
+              </View>
+            ))}
           </Animated.ScrollView>
 
-          <View style={[styles.bottomControls, { paddingBottom: insets.bottom + 32 }]}>
+          <View style={[styles.bottomControls, { paddingBottom: insets.bottom + 24 }]}>
             <View style={styles.indicators}>
-              {PAGES.map((i) => <IndicatorDot key={i} index={i} scrollX={scrollX} />)}
+              {PAGES.map((i) => <IndicatorBar key={i} index={i} scrollX={scrollX} />)}
             </View>
-            {currentPage === 2 && !isNameValid ? (
-              <Text style={styles.helper}>At least 2 letters</Text>
-            ) : <View style={styles.helperSpace} />}
+
             <Pressable
               disabled={currentPage === 2 && !isNameValid}
-              onPress={currentPage === 3 ? complete : goNext}
-              style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryButtonPressed, currentPage === 2 && !isNameValid && styles.primaryButtonDisabled]}
+              onPress={onLastPage ? complete : goNext}
+              style={({ pressed }) => [
+                styles.cta,
+                pressed && styles.ctaPressed,
+                currentPage === 2 && !isNameValid && styles.ctaDisabled,
+              ]}
             >
-              <LinearGradient
-                colors={currentPage === 3 ? ['#FF2D55', '#FF9F0A'] : ['#0A84FF', '#30D158']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <Text style={styles.primaryButtonText}>{currentPage === 3 ? "Let's Play" : 'Continue'}</Text>
-              <IconSymbol name={currentPage === 3 ? 'gamecontroller.fill' : 'chevron.right'} size={17} color="#fff" />
+              <View style={styles.ctaShadow} />
+              <View style={styles.ctaInner}>
+                <Text style={styles.ctaText}>
+                  {onLastPage ? "LET'S PLAY" : currentPage === 2 ? (isNameValid ? 'LOOKS GOOD' : 'TYPE YOUR NAME') : 'CONTINUE'}
+                </Text>
+                <IconSymbol name={onLastPage ? 'gamecontroller.fill' : 'chevron.right'} size={18} color={INK} />
+              </View>
             </Pressable>
           </View>
         </View>
@@ -334,134 +340,133 @@ export default function OnboardingScreen() {
   );
 }
 
-function OnboardPage({ active, eyebrow, title, subtitle, children, compact }: { active: boolean; eyebrow: string; title: string; subtitle: string; children: React.ReactNode; compact?: boolean }) {
+function CopyBlock({ active, eyebrow, title, subtitle }: { active: boolean; eyebrow: string; title: string; subtitle: string }) {
+  const enter = useSharedValue(0);
+  useEffect(() => {
+    enter.value = active
+      ? withDelay(140, withSpring(1, { damping: 14, stiffness: 130 }))
+      : withTiming(0, { duration: 160 });
+  }, [active, enter]);
+  const a = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [{ translateY: interpolate(enter.value, [0, 1], [22, 0], Extrapolate.CLAMP) }],
+  }));
   return (
-    <View style={[styles.page, compact && styles.pageCompact]}>
-      <View style={[styles.artWrap, compact && styles.artWrapCompact]}>{children}</View>
-      <EnterStage active={active} delay={120}>
-        <View style={styles.copyCard}>
-          <Text style={styles.eyebrow}>{eyebrow}</Text>
-          {!compact && <Text style={styles.title}>{title}</Text>}
-          {!compact && <Text style={styles.subtitle}>{subtitle}</Text>}
-        </View>
-      </EnterStage>
-    </View>
+    <Animated.View style={[styles.copyBlock, a]}>
+      <View style={styles.eyebrowPill}>
+        <Text style={styles.eyebrowText}>{eyebrow}</Text>
+      </View>
+      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.subtitle}>{subtitle}</Text>
+    </Animated.View>
   );
 }
 
-const ART_SIZE = Math.min(SCREEN_WIDTH - 48, 360);
-const ART_SIZE_COMPACT = 140;
-const ID_CARD_WIDTH = Math.min(SCREEN_WIDTH - 40, 360);
+function NameSticker({ active, name, setName, inputRef }: { active: boolean; name: string; setName: (s: string) => void; inputRef: React.RefObject<TextInput | null> }) {
+  const enter = useSharedValue(0);
+  const wobble = useSharedValue(0);
+
+  useEffect(() => {
+    if (active) {
+      enter.value = withSpring(1, { damping: 12, stiffness: 110 });
+      wobble.value = withRepeat(
+        withSequence(withTiming(1, { duration: 2200 }), withTiming(0, { duration: 2200 })),
+        -1,
+        true,
+      );
+    } else {
+      enter.value = withTiming(0, { duration: 180 });
+      wobble.value = 0;
+    }
+  }, [active, enter, wobble]);
+
+  const frameStyle = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [
+      { scale: interpolate(enter.value, [0, 1], [0.85, 1], Extrapolate.CLAMP) },
+      { rotate: `${interpolate(wobble.value, [0, 1], [-2, -3], Extrapolate.CLAMP)}deg` },
+    ],
+  }));
+
+  return (
+    <Animated.View style={[styles.nameStickerWrap, frameStyle]}>
+      <View style={[styles.stickerShadow, { backgroundColor: INK }]} />
+      <View style={[styles.nameSticker, { backgroundColor: CREAM }]}>
+        <View style={styles.nameStickerHeader}>
+          <Text style={styles.nameStickerHeaderText}>HELLO</Text>
+          <Text style={styles.nameStickerHeaderSub}>MY NAME IS</Text>
+        </View>
+        <View style={styles.nameStickerBody}>
+          <TextInput
+            ref={inputRef}
+            value={name}
+            onChangeText={setName}
+            placeholder="YOUR NAME"
+            placeholderTextColor="rgba(17,17,17,0.25)"
+            style={styles.nameInput}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            returnKeyType="done"
+            onSubmitEditing={Keyboard.dismiss}
+            maxLength={14}
+          />
+          <View style={styles.nameUnderline} />
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+const STAGE = Math.min(SCREEN_WIDTH - 56, Math.min(SCREEN_HEIGHT * 0.42, 360));
+const NAME_W = Math.min(SCREEN_WIDTH - 48, 360);
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.black },
-  page: { width: SCREEN_WIDTH, flex: 1, justifyContent: 'center', paddingHorizontal: 22, paddingBottom: 180, paddingTop: 20 },
-  pageCompact: { justifyContent: 'flex-start', paddingTop: 24, paddingBottom: 200 },
-  artWrap: { alignItems: 'center', justifyContent: 'center', minHeight: ART_SIZE + 16, marginBottom: 8 },
-  artWrapCompact: { minHeight: ART_SIZE_COMPACT + 8, marginBottom: 4 },
-  artStage: { width: ART_SIZE, height: ART_SIZE, alignItems: 'center', justifyContent: 'center' },
-  artStageCompact: { width: ART_SIZE_COMPACT, height: ART_SIZE_COMPACT, alignItems: 'center', justifyContent: 'center' },
-  artGlow: { position: 'absolute', alignSelf: 'center' },
-  artImage: { width: ART_SIZE, height: ART_SIZE },
-  artImageCompact: { width: ART_SIZE_COMPACT, height: ART_SIZE_COMPACT },
-  heroNameBadge: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroNameBadgeInner: {
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: '#FFD60A',
-    borderWidth: 2,
-    borderColor: '#fff',
-    maxWidth: ART_SIZE * 0.5,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  heroNameText: { fontFamily: 'Viral-Black', fontSize: 14, color: '#111827', textAlign: 'center', letterSpacing: 0.5 },
-  copyCard: { alignItems: 'center', paddingHorizontal: 10, marginTop: 8 },
-  eyebrow: { color: '#FFD60A', fontSize: 11, fontFamily: 'Viral-Black', marginBottom: 10, letterSpacing: 2 },
-  title: { color: '#fff', fontFamily: 'Viral-Black', fontSize: 26, lineHeight: 32, textAlign: 'center', marginBottom: 10 },
-  subtitle: { color: 'rgba(255,255,255,0.62)', fontSize: 14, lineHeight: 20, textAlign: 'center', fontWeight: '600', paddingHorizontal: 14 },
-  inputShell: { marginTop: 18, width: SCREEN_WIDTH - 72, height: 60, borderRadius: 22, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
-  input: { flex: 1, textAlign: 'center', color: '#fff', fontFamily: 'Viral-Black', fontSize: 22, paddingHorizontal: 20 },
-  idCard: {
-    width: ID_CARD_WIDTH,
-    alignSelf: 'center',
-    borderRadius: 24,
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: 0,
-    backgroundColor: '#FFF7E1',
-    borderWidth: 3,
-    borderColor: '#111827',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.5,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 14,
-  },
-  idCardTopBar: {
-    backgroundColor: '#FFD60A',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 3,
-    borderBottomColor: '#111827',
-  },
-  idCardBrand: { fontFamily: 'Viral-Black', color: '#111827', fontSize: 16, letterSpacing: 2 },
-  idCardBrandSub: { fontFamily: 'Viral-Black', color: '#111827', fontSize: 10, letterSpacing: 2, opacity: 0.7 },
-  idCardBody: {
-    flexDirection: 'row',
-    padding: 14,
-    gap: 14,
-    alignItems: 'flex-start',
-  },
-  idCardPhotoFrame: {
-    width: 92,
-    height: 116,
-    borderRadius: 10,
-    borderWidth: 3,
-    borderColor: '#111827',
-    backgroundColor: '#FF9F0A',
-    overflow: 'hidden',
-  },
-  idCardPhoto: { width: '100%', height: '100%' },
-  idCardFields: { flex: 1, paddingTop: 2 },
-  idCardFieldLabel: { color: 'rgba(17,24,39,0.55)', fontSize: 10, letterSpacing: 2, fontFamily: 'Viral-Black', marginBottom: 2 },
-  idCardInput: {
-    color: '#111827',
-    fontFamily: 'Viral-Black',
-    fontSize: 22,
-    paddingVertical: Platform.OS === 'ios' ? 6 : 2,
-    paddingHorizontal: 0,
-    letterSpacing: 1,
-    includeFontPadding: false,
-  },
-  idCardUnderline: { height: 2, backgroundColor: '#111827', borderRadius: 2, marginBottom: 12 },
-  idCardMetaRow: { flexDirection: 'row', gap: 14 },
-  idCardMetaCol: { flex: 1 },
-  idCardMetaLabel: { color: 'rgba(17,24,39,0.55)', fontSize: 9, letterSpacing: 2, fontFamily: 'Viral-Black', marginBottom: 2 },
-  idCardMetaValue: { color: '#111827', fontSize: 12, letterSpacing: 1, fontFamily: 'Viral-Black' },
-  idCardBottomStripe: { height: 14, backgroundColor: '#FF2D55', borderTopWidth: 3, borderTopColor: '#111827' },
-  bottomControls: { position: 'absolute', left: 24, right: 24, bottom: 0, gap: 10 },
-  indicators: { flexDirection: 'row', justifyContent: 'center', gap: 8, height: 10, alignItems: 'center' },
-  indicator: { height: 8, borderRadius: 999, backgroundColor: '#fff' },
-  helper: { textAlign: 'center', color: 'rgba(255,255,255,0.54)', fontSize: 12, fontWeight: '700' },
-  helperSpace: { height: 15 },
-  primaryButton: { height: 58, borderRadius: 24, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, shadowColor: '#0A84FF', shadowOpacity: 0.42, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
-  primaryButtonPressed: { transform: [{ scale: 0.98 }] },
-  primaryButtonDisabled: { opacity: 0.45 },
-  primaryButtonText: { color: '#fff', fontFamily: 'Viral-Black', fontSize: 18 },
+  container: { flex: 1, backgroundColor: YELLOW },
+  page: { width: SCREEN_WIDTH, flex: 1, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 200, alignItems: 'center', justifyContent: 'flex-start' },
+
+  brandRow: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 50, marginBottom: 12 },
+  brandPill: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, borderWidth: 3, borderColor: INK },
+  brandText: { color: '#fff', fontFamily: 'Viral-Black', fontSize: 13, letterSpacing: 2 },
+  skipText: { color: INK, fontFamily: 'Viral-Black', fontSize: 13, letterSpacing: 2, opacity: 0.65 },
+
+  stageWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: STAGE + 40, width: '100%' },
+
+  stickerWrap: { width: STAGE, height: STAGE, alignItems: 'center', justifyContent: 'center' },
+  stickerShadow: { position: 'absolute', left: 8, top: 10, right: -8, bottom: -10, borderRadius: 28 },
+  stickerFrame: { position: 'absolute', inset: 0, borderRadius: 28, borderWidth: 4, borderColor: INK, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  dotPattern: { position: 'absolute', inset: 0, flexDirection: 'row', flexWrap: 'wrap', padding: 14, opacity: 0.18 },
+  dot: { width: (STAGE - 28) / 7 - 6, height: (STAGE - 28) / 7 - 6, margin: 3, borderRadius: 999, backgroundColor: INK },
+  artHolder: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
+  artImage: { width: '94%', height: '94%' },
+
+  heroBadge: { position: 'absolute', top: '46%', alignSelf: 'center' },
+  heroBadgeShadow: { position: 'absolute', left: 4, top: 4, right: -4, bottom: -4, backgroundColor: INK, borderRadius: 999 },
+  heroBadgeInner: { paddingHorizontal: 16, paddingVertical: 6, backgroundColor: '#fff', borderRadius: 999, borderWidth: 3, borderColor: INK, maxWidth: STAGE * 0.6 },
+  heroBadgeText: { fontFamily: 'Viral-Black', fontSize: 16, color: INK, textAlign: 'center', letterSpacing: 1 },
+
+  nameStickerWrap: { width: NAME_W, alignItems: 'center', justifyContent: 'center' },
+  nameSticker: { width: '100%', borderRadius: 22, borderWidth: 4, borderColor: INK, overflow: 'hidden' },
+  nameStickerHeader: { backgroundColor: PINK, paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center', borderBottomWidth: 4, borderBottomColor: INK },
+  nameStickerHeaderText: { fontFamily: 'Viral-Black', color: '#fff', fontSize: 32, letterSpacing: 4 },
+  nameStickerHeaderSub: { fontFamily: 'Viral-Black', color: '#fff', fontSize: 12, letterSpacing: 4, opacity: 0.85, marginTop: 2 },
+  nameStickerBody: { paddingHorizontal: 22, paddingVertical: 22 },
+  nameInput: { fontFamily: 'Viral-Black', fontSize: 30, color: INK, textAlign: 'center', letterSpacing: 2, paddingVertical: Platform.OS === 'ios' ? 6 : 2, includeFontPadding: false },
+  nameUnderline: { height: 4, backgroundColor: INK, borderRadius: 4, marginTop: 6 },
+
+  copyBlock: { width: '100%', alignItems: 'center', paddingHorizontal: 8, marginTop: 8 },
+  eyebrowPill: { backgroundColor: INK, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, marginBottom: 12 },
+  eyebrowText: { color: '#fff', fontFamily: 'Viral-Black', fontSize: 11, letterSpacing: 2.5 },
+  title: { color: INK, fontFamily: 'Viral-Black', fontSize: 30, lineHeight: 34, textAlign: 'center', marginBottom: 8 },
+  subtitle: { color: INK, fontSize: 14, lineHeight: 20, textAlign: 'center', fontWeight: '700', opacity: 0.75, paddingHorizontal: 12 },
+
+  bottomControls: { position: 'absolute', left: 24, right: 24, bottom: 0, gap: 14 },
+  indicators: { flexDirection: 'row', justifyContent: 'center', gap: 8, height: 16, alignItems: 'center' },
+  indicator: { height: 10, borderRadius: 999, backgroundColor: INK, borderWidth: 2, borderColor: INK },
+
+  cta: { height: 64, justifyContent: 'center' },
+  ctaShadow: { position: 'absolute', left: 6, top: 8, right: -6, bottom: -8, backgroundColor: INK, borderRadius: 22 },
+  ctaInner: { flex: 1, backgroundColor: YELLOW, borderRadius: 22, borderWidth: 4, borderColor: INK, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  ctaText: { color: INK, fontFamily: 'Viral-Black', fontSize: 18, letterSpacing: 1.5 },
+  ctaPressed: { transform: [{ translateX: 3 }, { translateY: 4 }] },
+  ctaDisabled: { opacity: 0.55 },
 });
