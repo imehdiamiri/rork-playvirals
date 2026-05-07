@@ -90,8 +90,11 @@ export const Observability = {
     console.error(`[obs:${severity}]`, message);
 
     // Best-effort upload — never throw from the observability layer.
+    // We only attempt the write when we have a real uid; anonymous writes
+    // would just be rejected by the per-uid scoped rules.
     try {
-      const uid = auth.currentUser?.uid || 'anon';
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
       const node = push(ref(rtdb, `crashLogs/${uid}`));
       set(node, {
         message,

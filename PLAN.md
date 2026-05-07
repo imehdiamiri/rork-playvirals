@@ -261,3 +261,25 @@
 - [x] New `recordHostMigration` callable Cloud Function bumps `metrics/hostMigrations/$day` and appends to `metrics/hostMigrationsLog`. `useMultiplayerStore.applyRoomSnapshot` invokes it whenever it successfully claims host (`reason: 'host_gone'`).
 - [x] `generateCard` now persists every generation (prompt + output + flagged bit) to `aiModerationLog` for admin review. Flagged outputs still throw, but the audit trail is captured first.
 - [x] `database.rules.json`: added `metrics/` and `aiModerationLog/` as fully server-only paths (no client read/write).
+
+### Phase L13 — Verified blocker fix pass (post-audit)
+- [x] **Gemini key**: removed `EXPO_PUBLIC_GEMINI_API_KEY` from `expo/.env`. Treat the previously-bundled key (`AIza…vevGQ`) as compromised — rotate in Google AI Studio. Added `expo/scripts/check-env.js` prebuild guard that fails the build if any AI / private secret is promoted to an `EXPO_PUBLIC_*` variable (or matches a Google API-key shape).
+- [x] **Background grace timer**: `_layout.tsx` no longer instantly calls `leaveRoom()` on `AppState` background. A 45-second deferred timer runs the leave only if the user doesn't return; foregrounding cancels it. Quick share-sheet / notification / lock-screen interruptions no longer destroy multiplayer sessions.
+- [x] **`crashLogs` rules**: rescoped to `crashLogs/$uid/$pushId` with auth-owner write enforcement, `$other` field rejection, and bounded `message`/`stack`/`tags` validators. `Observability.recordError` now skips the upload entirely for anonymous users (matches the rules) so we never spam rejected writes.
+- [x] **`gameState.turnData` validator**: replaced the inverted rule with one that allows strings up to 16 KB and arbitrary nested objects, but rejects bare numbers/booleans and oversized strings — protects against room griefing + RTDB cost abuse.
+- [x] **`processedActions` lifecycle**: `cleanupGameState` now also `remove`s `rooms/$code/processedActions` so the watermark can't grow forever. `useGameSync` opportunistically calls `gameSyncService.pruneProcessedActions(roomCode, 200)` whenever the in-memory set crosses 250 entries.
+- [x] **Reachable report/block UI**:
+  - `lobby/[roomCode].tsx` now renders a flag button on every non-self player row that opens `ReportUserSheet`.
+  - `(tabs)/friends.tsx` adds a flag button next to each search result.
+  - `ReportUserSheet` already submits via `moderationService.reportUser` (Cloud Function) and optionally blocks the target.
+- [x] **Admin reports moderation page**: added `website/app/admin/reports/page.tsx` (filterable by reason + status) backed by `listReports()` in `website/lib/data.ts`. Reads from `reports/` via the Admin SDK (rules already block client read/write).
+- [x] **`deleteAccount` local-state cleanup**: `profile.tsx` deletion handler now wipes persisted Zustand stores (`friends-storage`, `settings-`, `paywall-`, `economy-`, `game-`, `multiplayer-`, `rork-`, `partybot-`), resets `useFriendsStore` in-memory, and forces a `leaveRoom()` so the device behaves like a fresh install.
+- [x] **Server-side rate limits**: `generateCard` now goes through `rateLimit('generateCard', 30/min)` in addition to the daily quota — closes the burst-AI cost-abuse vector flagged in the audit.
+
+### Verified verdict (post-L13)
+- Gemini key fully removed from the client bundle (CI guard added).
+- Multiplayer sessions resilient to brief backgrounding again (no instant leave).
+- `crashLogs` and `turnData` rules now actually validate ownership + payload size.
+- App Store moderation surface complete: report/block reachable from real UI, admin queue exists.
+- `processedActions` bounded; no replay-after-host-migration regression.
+- Account deletion now leaves zero local trace.

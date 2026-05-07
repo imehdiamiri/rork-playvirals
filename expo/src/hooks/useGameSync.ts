@@ -63,9 +63,11 @@ export function useGameSync<T>(
     const entries = Object.entries(playerActions || {});
     if (entries.length === 0) return;
 
+    let drained = 0;
     for (const [key, action] of entries) {
       if (processedKeys.current.has(key)) continue;
       processedKeys.current.add(key);
+      drained++;
       try {
         onActionReceived(action.type, action.data, action.playerId);
       } catch (e) {
@@ -75,6 +77,10 @@ export function useGameSync<T>(
       // still leaves a trail the next host can resume from.
       gameSyncService.markActionProcessed(roomCode, key).catch(() => {});
       gameSyncService.ackAction(roomCode, key).catch(() => {});
+    }
+    // Periodically prune the persisted watermark so it stays bounded.
+    if (drained > 0 && processedKeys.current.size > 250) {
+      gameSyncService.pruneProcessedActions(roomCode, 200).catch(() => {});
     }
   }, [playerActions, isHost, isMultiplayer, onActionReceived, roomCode]);
 

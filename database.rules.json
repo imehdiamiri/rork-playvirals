@@ -81,7 +81,21 @@
           "phase":         { ".validate": "newData.isString() && newData.val().length <= 32" },
           "lastUpdatedAt": { ".validate": "newData.isNumber()" },
           "turnData": {
-            ".validate": "!newData.exists() || newData.isString() == false"
+            // Bound the host-authoritative turn payload to keep RTDB cost in
+            // check and reject room-griefing attempts. Allow strings (e.g.
+            // serialized snapshots) up to 16KB and arbitrary nested objects
+            // capped to ~16KB worth of children.
+            ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 16384) || (!newData.isString() && !newData.isNumber() && !newData.isBoolean())"
+          }
+        },
+
+        "processedActions": {
+          // Watermark of action keys the host has drained, so a freshly
+          // promoted host doesn't replay them. Host-only writes; values are
+          // numeric server timestamps.
+          ".write": "auth != null && data.parent().child('hostId').val() == auth.uid",
+          "$actionKey": {
+            ".validate": "newData.isNumber()"
           }
         },
 
@@ -151,7 +165,26 @@
     "reportsDedup":  { ".read": false, ".write": false },
     "reportCounts":  { ".read": false, ".write": false },
     "rateLimits":    { ".read": false, ".write": false },
-    "crashLogs":     { ".read": false, ".write": "auth != null" },
+    "crashLogs": {
+      // Per-user scoped crash diagnostics. Owners can append; nobody can read
+      // from the client (admin SDK only). Each entry has a bounded shape so
+      // we don't end up with arbitrary blobs.
+      ".read": false,
+      "$uid": {
+        ".write": "auth != null && auth.uid == $uid",
+        "$pushId": {
+          ".validate": "newData.hasChildren(['message','at']) && newData.child('message').isString() && newData.child('message').val().length <= 1000 && newData.child('at').isNumber()",
+          "message":    { ".validate": "newData.isString() && newData.val().length <= 1000" },
+          "stack":      { ".validate": "newData.isString() && newData.val().length <= 4000" },
+          "severity":   { ".validate": "newData.isString() && newData.val().length <= 16" },
+          "platform":   { ".validate": "newData.isString() && newData.val().length <= 16" },
+          "appVersion": { ".validate": "newData.isString() && newData.val().length <= 32" },
+          "tags":       { ".validate": "newData.hasChildren() || !newData.exists()" },
+          "at":         { ".validate": "newData.isNumber()" },
+          "$other":     { ".validate": false }
+        }
+      }
+    },
 
     "metrics": {
       ".read": false,

@@ -9,6 +9,7 @@ import { Games } from '@/src/models/AppModels';
 import { useMultiplayerStore } from '@/src/store/useMultiplayerStore';
 import { multiplayerService } from '@/src/services/MultiplayerService';
 import { MultiplayerStatusBanner } from '@/src/components/MultiplayerStatusBanner';
+import { ReportUserSheet } from '@/src/components/ReportUserSheet';
 import * as Clipboard from 'expo-clipboard';
 
 export default function LobbyScreen() {
@@ -66,6 +67,16 @@ export default function LobbyScreen() {
     } catch (e) {
       console.log('share cancelled', e);
     }
+  };
+
+  // App Store moderation requires that any UGC surface (multiplayer rooms
+  // included) exposes a user-level report/block flow. We open the sheet from
+  // a long-press on a player row so it stays out of the way for normal play.
+  const [reportTarget, setReportTarget] = useState<{ uid: string; name: string } | null>(null);
+
+  const handleReport = (playerId: string, name: string) => {
+    if (playerId === localPlayerId) return;
+    setReportTarget({ uid: playerId, name });
   };
 
   const handleKick = (playerId: string, name: string) => {
@@ -224,6 +235,16 @@ export default function LobbyScreen() {
                   </View>
                 )}
                 
+                {player.id !== localPlayerId && (
+                  <TouchableOpacity
+                    style={styles.reportButton}
+                    onPress={() => handleReport(player.id, player.displayName)}
+                    accessibilityLabel={`Report ${player.displayName}`}
+                  >
+                    <IconSymbol name="flag" size={12} color="rgba(255,255,255,0.5)" />
+                  </TouchableOpacity>
+                )}
+
                 {isHost && player.id !== localPlayerId && (
                   <TouchableOpacity style={styles.kickButton} onPress={() => handleKick(player.id, player.displayName)}>
                     <Text style={styles.kickText}>Remove</Text>
@@ -235,6 +256,13 @@ export default function LobbyScreen() {
         </View>
 
       </ScrollView>
+
+      <ReportUserSheet
+        visible={!!reportTarget}
+        targetUid={reportTarget?.uid ?? ''}
+        targetName={reportTarget?.name}
+        onClose={() => setReportTarget(null)}
+      />
     </View>
   );
 }
@@ -423,6 +451,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
+  },
+  reportButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
   },
   kickText: {
     color: Colors.red,

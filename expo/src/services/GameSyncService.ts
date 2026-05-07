@@ -78,6 +78,25 @@ class GameSyncService {
     } catch {}
   }
 
+  /**
+   * Bound the processedActions watermark so it cannot grow forever. Called
+   * opportunistically by the host whenever a draining batch crosses the
+   * cap. Drops the oldest entries past `maxKeep`.
+   */
+  async pruneProcessedActions(roomCode: string, maxKeep: number = 200): Promise<void> {
+    try {
+      const snap = await get(ref(database, `rooms/${roomCode}/processedActions`));
+      if (!snap.exists()) return;
+      const entries = Object.entries<number>(snap.val() || {});
+      if (entries.length <= maxKeep) return;
+      entries.sort((a, b) => (a[1] || 0) - (b[1] || 0));
+      const drop = entries.slice(0, entries.length - maxKeep);
+      const updates: Record<string, null> = {};
+      for (const [k] of drop) updates[k] = null;
+      await update(ref(database, `rooms/${roomCode}/processedActions`), updates);
+    } catch {}
+  }
+
   /** Initialize game state for a room (host only) */
   async initGameState(roomCode: string, initialState: GameStatePayload): Promise<void> {
     const stateRef = ref(database, `rooms/${roomCode}/gameState`);
@@ -228,6 +247,8 @@ class GameSyncService {
       remove(ref(database, `rooms/${roomCode}/gameState`)),
       remove(ref(database, `rooms/${roomCode}/actions`)),
       remove(ref(database, `rooms/${roomCode}/presence`)),
+      // Watermark is meaningless once the game ends — prevents unbounded growth.
+      remove(ref(database, `rooms/${roomCode}/processedActions`)),
     ]);
   }
 

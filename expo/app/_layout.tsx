@@ -72,27 +72,51 @@ export default function RootLayout() {
     usePaywallStore.getState().configure(uid);
   }, [currentUser?.uid]);
 
-  // Track app foreground/background for presence
+  // Track app foreground/background for presence + room lifecycle.
+  //
+  // CRITICAL: do NOT instantly leaveRoom() on background. A user briefly
+  // checking notifications, opening the share sheet, or being interrupted by
+  // a phone call should stay in the room. We only treat the session as dead
+  // after a 45s grace window so the natural multiplayer reconnect flow
+  // (heartbeat + onDisconnect) gets a chance to recover the session.
+  const backgroundTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
+    const BACKGROUND_GRACE_MS = 45_000;
     const subscription = AppState.addEventListener('change', (nextState) => {
       const uid = currentUser?.uid;
       if (!uid) return;
 
-      if (appState.current.match(/inactive|background/) && nextState === 'active') {
-        setUserOnline(uid);
-      } else if (nextState.match(/inactive|background/)) {
-        setUserOffline(uid);
-        // Hard-leave any active multiplayer room on background so we don't leak
-        // ghost players + heartbeats while the app is suspended. The user can
-        // rejoin via the room code if they come back inside the TTL window.
-        const mp = useMultiplayerStore.getState();
-        if (mp.roomCode) {
-          mp.leaveRoom().catch(() => {});
+      const wasBackgrounded = appState.current.match(/inactive|background/);
+      const goingBackground = nextState.match(/inactive|background/);
+
+      if (wasBackgrounded && nextState === 'active') {
+        // Foreground: cancel pending leave, refresh presence.
+        if (backgroundTimer.current) {
+          clearTimeout(backgroundTimer.current);
+          backgroundTimer.current = null;
         }
+        setUserOnline(uid);
+      } else if (goingBackground) {
+        setUserOffline(uid);
+        // Schedule a deferred leave after the grace window. If the user
+        // returns before then we cancel it above. If they don't, we tear
+        // the session down so we don't leak heartbeats + listeners.
+        if (backgroundTimer.current) clearTimeout(backgroundTimer.current);
+        backgroundTimer.current = setTimeout(() => {
+          backgroundTimer.current = null;
+          const mp = useMultiplayerStore.getState();
+          if (mp.roomCode) mp.leaveRoom().catch(() => {});
+        }, BACKGROUND_GRACE_MS);
       }
       appState.current = nextState;
     });
-    return () => subscription.remove();
+    return () => {
+      subscription.remove();
+      if (backgroundTimer.current) {
+        clearTimeout(backgroundTimer.current);
+        backgroundTimer.current = null;
+      }
+    };
   }, [currentUser?.uid]);
 
   useEffect(() => {

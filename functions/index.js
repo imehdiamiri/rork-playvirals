@@ -107,6 +107,9 @@ exports.generateCard = onCall(
   async (request) => {
     const uid = request.auth?.uid;
     if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+    // Per-user burst protection separate from the daily AI quota: stops a
+    // misbehaving client (or compromised token) from spinning up Gemini calls.
+    await rateLimit(uid, 'generateCard', 30, 60 * 1000);
 
     const { system, user } = request.data || {};
     if (typeof system !== 'string' || typeof user !== 'string') {

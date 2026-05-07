@@ -441,6 +441,45 @@ export async function listAiLogs(limit = 200): Promise<AiLogRow[]> {
   return out.sort((a, b) => (a.day < b.day ? 1 : -1)).slice(0, limit);
 }
 
+// ─────────────────────── Reports / moderation queue ───────────────────────
+
+export type ReportRow = {
+  id: string;
+  reporterUid: string;
+  targetUid: string;
+  reason: string;
+  context: string;
+  at: number;
+  status: "pending" | "reviewed";
+};
+
+export async function listReports(opts: {
+  reason?: string;
+  status?: string;
+  limit?: number;
+} = {}): Promise<ReportRow[]> {
+  const limit = opts.limit ?? 200;
+  const snap = await rtdb().ref("reports").limitToLast(limit).once("value");
+  const out: ReportRow[] = [];
+  snap.forEach((c) => {
+    const v = c.val() || {};
+    const status = (v.status === "reviewed" ? "reviewed" : "pending") as ReportRow["status"];
+    if (opts.reason && opts.reason !== "all" && v.reason !== opts.reason) return false;
+    if (opts.status && opts.status !== "all" && status !== opts.status) return false;
+    out.push({
+      id: c.key as string,
+      reporterUid: String(v.reporterUid ?? ""),
+      targetUid: String(v.targetUid ?? ""),
+      reason: String(v.reason ?? "other"),
+      context: String(v.context ?? ""),
+      at: Number(v.at ?? 0),
+      status,
+    });
+    return false;
+  });
+  return out.sort((a, b) => b.at - a.at);
+}
+
 export async function listInvites(limit = 200) {
   const snap = await rtdb().ref("users").once("value");
   const usernames = new Map<string, string>();

@@ -11,6 +11,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useFriendsStore } from '@/src/store/useFriendsStore';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { showToast } from '@/src/components/ToastOverlay';
+import { ReportUserSheet } from '@/src/components/ReportUserSheet';
 
 // Platform-safe BlurView
 let BlurViewComponent: any = null;
@@ -45,6 +46,9 @@ export default function FriendsScreen() {
   const [editingOfflineFriendName, setEditingOfflineFriendName] = useState<string>('');
 
   const [searchText, setSearchText] = useState<string>('');
+  // Reachable App-Store-compliant report/block flow from the only social
+  // surface we ship today.
+  const [reportTarget, setReportTarget] = useState<{ uid: string; name: string } | null>(null);
 
   useEffect(() => {
     if (currentUserId) {
@@ -325,6 +329,13 @@ export default function FriendsScreen() {
                             <Text style={styles.invitePillButtonText}>Add</Text>
                           </TouchableOpacity>
                         )}
+                        <TouchableOpacity
+                          onPress={() => setReportTarget({ uid: result.id, name: result.username })}
+                          style={{ marginLeft: 6, padding: 6 }}
+                          accessibilityLabel={`Report ${result.username}`}
+                        >
+                          <IconSymbol name="flag" size={13} color="rgba(255,255,255,0.45)" />
+                        </TouchableOpacity>
                       </View>
                     ))
                   )}

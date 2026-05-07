@@ -123,6 +123,38 @@ export default function ProfileScreen() {
                       return;
                     }
                     await signOut().catch(() => {});
+
+                    // Treat the device like a fresh install: nuke every
+                    // persisted store + cached multiplayer/economy/friend
+                    // surface so a future signup doesn't inherit the deleted
+                    // user's state.
+                    try {
+                      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+                      const keys = await AsyncStorage.getAllKeys();
+                      const drop = keys.filter((k) =>
+                        k.startsWith('friends-storage') ||
+                        k.startsWith('settings-') ||
+                        k.startsWith('paywall-') ||
+                        k.startsWith('economy-') ||
+                        k.startsWith('game-') ||
+                        k.startsWith('multiplayer-') ||
+                        k.startsWith('rork-') ||
+                        k.startsWith('partybot-')
+                      );
+                      if (drop.length > 0) await AsyncStorage.multiRemove(drop);
+                    } catch {}
+                    try {
+                      const { useFriendsStore } = await import('@/src/store/useFriendsStore');
+                      useFriendsStore.setState({
+                        onlineFriends: [], friendRequests: [], searchResults: [],
+                        offlineFriends: [], inviteCode: '',
+                      });
+                    } catch {}
+                    try {
+                      const { useMultiplayerStore } = await import('@/src/store/useMultiplayerStore');
+                      await useMultiplayerStore.getState().leaveRoom().catch(() => {});
+                    } catch {}
+
                     setIsDeleting(false);
                     router.replace('/onboarding');
                   },
