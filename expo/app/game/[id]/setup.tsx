@@ -66,7 +66,7 @@ export default function GameSetupScreen() {
   const [roundCount, setRoundCount] = useState(3);
 
   // Games that have rounds (not grid/special games)
-  const needsRounds = !['reverse_singing', 'memory_grid', 'memory_path', 'tap_in_order', 'ten_tangle', 'color_trap', 'spin_bottle', 'draw_rush'].includes(id || '');
+  const needsRounds = !['reverse_singing', 'memory_grid', 'memory_path', 'tap_in_order', 'ten_tangle', 'color_trap', 'spin_bottle', 'draw_rush', 'reaction_time'].includes(id || '');
 
   // ─── Memory Grid state ───
   const [mgGridSize, setMgGridSize] = useState<MemoryGridSize>('tiny3x4');

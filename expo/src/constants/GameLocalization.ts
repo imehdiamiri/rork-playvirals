@@ -66,6 +66,13 @@ export const GameInstructions: Record<string, string[]> = {
     "Three wrong taps and you're out.",
     "Survive longest and score the most hits to win."
   ],
+  reaction_time: [
+    "When the screen turns RED, get ready — but don't tap yet!",
+    "Wait for the screen to turn GREEN, then tap as fast as you can.",
+    "Your reaction time is measured in milliseconds — lower is better!",
+    "If you tap too early (while still red), it's a foul and you must try again.",
+    "Each player gets 3 attempts and the best time counts.",
+  ],
   draw_rush: [
     "Each player takes turns as the drawer. Others guess.",
     "The drawer gets a secret word and 60 seconds to draw it.",

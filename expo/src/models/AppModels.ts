@@ -205,6 +205,21 @@ export const Games: Record<string, GameType> = {
     roundDuration: 0,
     heroImageURL: null,
   },
+  reactionTime: {
+    id: 'reaction_time',
+    name: 'Reaction Time',
+    shortDescription: 'Wait for green, then tap as fast as you can. Lowest reaction time wins.',
+    minPlayers: 1,
+    maxPlayers: 30,
+    unlockCostStars: 0,
+    isFreeForever: true,
+    hasFreeTrial: false,
+    isPremium: false,
+    symbolName: 'bolt.fill',
+    supportedModes: [GameMode.singleDevice],
+    roundDuration: 0,
+    heroImageURL: null,
+  },
   drawRush: {
     id: 'draw_rush',
     name: 'Draw & Rush',
@@ -236,6 +251,7 @@ export const GameLibrary: GameType[] = [
   Games.colorTrap,
   Games.drawRush,
   Games.spinBottle,
+  Games.reactionTime,
 ];
 
 export interface GameDefinition {
@@ -255,6 +271,7 @@ export const GamesDefinitions: GameDefinition[] = [
   { id: Games.colorTrap, accentName: 'red' },
   { id: Games.drawRush, accentName: 'blue' },
   { id: Games.spinBottle, accentName: 'purple' },
+  { id: Games.reactionTime, accentName: 'green' },
 ];
 
 export const getPlayerCountText = (min: number, max: number): string => `${min}–${max} players`;

@@ -64,6 +64,12 @@ export const GAME_HINTS: Record<string, { icon: string; title: string; tip: stri
     tip: 'Spin the bottle to pick a player, then choose Truth or Dare. You get 2 rerolls if you don\'t like the prompt!',
     accent: '#FF2D55',
   },
+  reaction_time: {
+    icon: 'bolt.fill',
+    title: 'How Reaction Time Works',
+    tip: 'Wait for the screen to turn GREEN, then tap as fast as you can. Tap during RED and it\'s a foul!',
+    accent: Colors.green,
+  },
   draw_rush: {
     icon: 'pencil.tip.crop.circle',
     title: 'Draw & Rush',
