@@ -116,7 +116,18 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
       (a: any, b: any) => (a.joinedAt || 0) - (b.joinedAt || 0)
     );
     if (candidates[0]?.id !== myId) return;
-    multiplayerService.claimHost(room.roomCode).catch(() => {});
+    multiplayerService.claimHost(room.roomCode).then((claimed) => {
+      if (!claimed) return;
+      // Fire-and-forget observability ping. Failure is non-fatal.
+      import('@/lib/firebase').then(({ functions }) => {
+        import('firebase/functions').then(({ httpsCallable }) => {
+          httpsCallable(functions, 'recordHostMigration')({
+            roomCode: room.roomCode,
+            reason: 'host_gone',
+          }).catch(() => {});
+        });
+      });
+    }).catch(() => {});
   }
 
   return {

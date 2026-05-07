@@ -8,6 +8,7 @@
  *   - redeemInvite:    Server-authoritative invite redemption (+stars, idempotent).
  *   - searchUsers:     Indexed prefix search over usernames.
  *   - sweepStaleRooms: Scheduled GC of abandoned rooms (TTL based on lastActivityAt).
+ *   - recordHostMigration: Append-only counter for live host-migration events.
  *
  * Deploy:
  *   firebase deploy --only functions
@@ -119,13 +120,50 @@ exports.generateCard = onCall(
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) throw new HttpsError('internal', 'Empty Gemini response');
 
-    if (!isSafe(text)) {
+    const flagged = !isSafe(text);
+
+    // Moderation queue — every generated card lands here for admin review.
+    // Server-only writes (closed to clients via rules); admins page can paginate it.
+    try {
+      await admin.database().ref('aiModerationLog').push({
+        uid,
+        prompt: user.slice(0, 500),
+        text: text.slice(0, 1000),
+        flagged,
+        at: Date.now(),
+      });
+    } catch (e) {
+      console.warn('aiModerationLog write failed', e);
+    }
+
+    if (flagged) {
       throw new HttpsError('failed-precondition', 'Generated content failed moderation.');
     }
 
     return { text };
   }
 );
+
+// ──────────────────────── recordHostMigration ────────────────────────
+
+/**
+ * Lightweight counter for observability. The client invokes this whenever it
+ * successfully promotes itself to host. We bucket by UTC day so the admin
+ * dashboard can chart migration volume without scanning room history.
+ */
+exports.recordHostMigration = onCall({ cors: true }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+  const roomCode = String(request.data?.roomCode || '').slice(0, 12);
+  const reason = String(request.data?.reason || 'host_gone').slice(0, 32);
+  const day = new Date().toISOString().split('T')[0];
+  const ref = admin.database().ref(`metrics/hostMigrations/${day}`);
+  await ref.transaction((v) => (v || 0) + 1);
+  await admin.database().ref('metrics/hostMigrationsLog').push({
+    uid, roomCode, reason, at: Date.now(),
+  });
+  return { ok: true };
+});
 
 // ──────────────────────── claimDailyReward ────────────────────────
 
@@ -401,5 +439,15 @@ exports.sweepStaleRooms = onSchedule('every 10 minutes', async () => {
   if (Object.keys(updates).length > 0) {
     await roomsRef.update(updates);
   }
+
+  const day = new Date().toISOString().split('T')[0];
+  await admin.database().ref(`metrics/sweeper/${day}`).transaction((v) => {
+    const m = v || { runs: 0, removed: 0, lastRunAt: 0 };
+    m.runs = (m.runs || 0) + 1;
+    m.removed = (m.removed || 0) + removed;
+    m.lastRunAt = now;
+    return m;
+  });
+
   console.log(`sweepStaleRooms: removed ${removed} room(s).`);
 });

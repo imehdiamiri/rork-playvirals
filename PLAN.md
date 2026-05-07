@@ -254,4 +254,10 @@
 ### TestFlight / beta readiness verdict
 - TestFlight: **safe**. No leaked secrets, no fake multiplayer flows, no client-trusted economy, room sessions survive brief disconnects.
 - Open beta: **safe** for an invite-list cohort. Watch the sweeper logs and `aiUsage` quotas before opening to public.
-- Soft launch / paid acquisition: host-migration UX banner now shipped (Phase L10). Remaining gating items before paid acquisition are observability (sweeper success metrics, host-migration counters) and a moderation queue for AI-generated cards.
+- Soft launch / paid acquisition: host-migration UX banner now shipped (Phase L10).
+
+### Phase L11 — Observability + AI moderation queue (paid-acquisition gating items)
+- [x] `functions/index.js` `sweepStaleRooms` now writes per-day metrics to `metrics/sweeper/$YYYY-MM-DD` (`runs`, `removed`, `lastRunAt`) via a transaction so the admin dashboard can chart sweeper health.
+- [x] New `recordHostMigration` callable Cloud Function bumps `metrics/hostMigrations/$day` and appends to `metrics/hostMigrationsLog`. `useMultiplayerStore.applyRoomSnapshot` invokes it whenever it successfully claims host (`reason: 'host_gone'`).
+- [x] `generateCard` now persists every generation (prompt + output + flagged bit) to `aiModerationLog` for admin review. Flagged outputs still throw, but the audit trail is captured first.
+- [x] `database.rules.json`: added `metrics/` and `aiModerationLog/` as fully server-only paths (no client read/write).
