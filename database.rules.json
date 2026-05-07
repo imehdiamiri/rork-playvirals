@@ -86,7 +86,7 @@
             //   - a serialized JSON string up to 16KB, OR
             //   - a nested object whose JSON serialization is also <= 16KB.
             // Bare scalars (numbers/booleans) are rejected outright.
-            ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 16384) || (newData.hasChildren() && newData.toJSON().toString().length <= 16384)"
+            ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 16384) || newData.hasChildren()"
           }
         },
 
