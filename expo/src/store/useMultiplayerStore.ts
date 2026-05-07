@@ -119,7 +119,7 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => {
     multiplayerService.claimHost(room.roomCode).then((claimed) => {
       if (!claimed) return;
       // Fire-and-forget observability ping. Failure is non-fatal.
-      import('@/lib/firebase').then(({ functions }) => {
+      import('@/src/lib/firebase').then(({ functions }) => {
         import('firebase/functions').then(({ httpsCallable }) => {
           httpsCallable(functions, 'recordHostMigration')({
             roomCode: room.roomCode,

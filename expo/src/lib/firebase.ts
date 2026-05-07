@@ -25,8 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ─── Configuration ───
 
-function readEnv(name: string): string {
-  const value = process.env[name];
+function requireEnv(name: string, value: string | undefined): string {
   if (!value) {
     // We throw rather than silently shipping a fallback project so that
     // misconfigured forks fail loudly in dev instead of writing to the
@@ -39,13 +38,13 @@ function readEnv(name: string): string {
 }
 
 const firebaseConfig = {
-  apiKey: readEnv('EXPO_PUBLIC_FIREBASE_API_KEY'),
-  authDomain: readEnv('EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN'),
-  projectId: readEnv('EXPO_PUBLIC_FIREBASE_PROJECT_ID'),
-  storageBucket: readEnv('EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET'),
-  messagingSenderId: readEnv('EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID'),
-  appId: readEnv('EXPO_PUBLIC_FIREBASE_APP_ID'),
-  databaseURL: readEnv('EXPO_PUBLIC_FIREBASE_DATABASE_URL'),
+  apiKey: requireEnv('EXPO_PUBLIC_FIREBASE_API_KEY', process.env.EXPO_PUBLIC_FIREBASE_API_KEY),
+  authDomain: requireEnv('EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN', process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN),
+  projectId: requireEnv('EXPO_PUBLIC_FIREBASE_PROJECT_ID', process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID),
+  storageBucket: requireEnv('EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET', process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET),
+  messagingSenderId: requireEnv('EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID', process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID),
+  appId: requireEnv('EXPO_PUBLIC_FIREBASE_APP_ID', process.env.EXPO_PUBLIC_FIREBASE_APP_ID),
+  databaseURL: requireEnv('EXPO_PUBLIC_FIREBASE_DATABASE_URL', process.env.EXPO_PUBLIC_FIREBASE_DATABASE_URL),
 };
 
 // ─── App ───
