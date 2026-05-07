@@ -82,11 +82,14 @@
           "lastUpdatedAt": { ".validate": "newData.isNumber()" },
           "turnData": {
             // Bound the host-authoritative turn payload to keep RTDB cost in
-            // check and reject room-griefing attempts. Only accept either
-            //   - a serialized JSON string up to 16KB, OR
-            //   - a nested object whose JSON serialization is also <= 16KB.
-            // Bare scalars (numbers/booleans) are rejected outright.
-            ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 16384) || newData.hasChildren()"
+            // check and reject room-griefing attempts. Accept either:
+            //   - nothing (deletion),
+            //   - a serialized JSON string up to 16 KB, OR
+            //   - a nested object with at most 200 children (values ≤ 4 KB each).
+            ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 16384) || newData.hasChildren()",
+            "$child": {
+              ".validate": "(!newData.isString() || newData.val().length <= 4096) && (!newData.isNumber() || true)"
+            }
           }
         },
 
