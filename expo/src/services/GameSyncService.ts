@@ -54,6 +54,30 @@ class GameSyncService {
   private heartbeats: Map<string, ReturnType<typeof setInterval>> = new Map();
   private versions: Map<string, number> = new Map();
 
+  /**
+   * Persist the host's processed-action watermark so a freshly-promoted host
+   * cannot replay actions that the previous host already handled. This is the
+   * server-side counterpart to `useGameSync`'s in-memory `processedKeys` set;
+   * after host migration the new host calls `loadProcessedActionKeys()` to
+   * seed its set from RTDB before it starts draining the queue.
+   */
+  async loadProcessedActionKeys(roomCode: string): Promise<Set<string>> {
+    try {
+      const snap = await get(ref(database, `rooms/${roomCode}/processedActions`));
+      if (!snap.exists()) return new Set();
+      return new Set(Object.keys(snap.val() || {}));
+    } catch {
+      return new Set();
+    }
+  }
+
+  /** Mark an action key as processed in RTDB (host only). */
+  async markActionProcessed(roomCode: string, actionKey: string): Promise<void> {
+    try {
+      await set(ref(database, `rooms/${roomCode}/processedActions/${actionKey}`), Date.now());
+    } catch {}
+  }
+
   /** Initialize game state for a room (host only) */
   async initGameState(roomCode: string, initialState: GameStatePayload): Promise<void> {
     const stateRef = ref(database, `rooms/${roomCode}/gameState`);

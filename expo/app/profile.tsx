@@ -82,36 +82,55 @@ export default function ProfileScreen() {
     }
   };
 
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete Account?',
-      'This will permanently delete your account, all game data, friends, and wallet. This action cannot be undone.',
+      'This will permanently delete your account, wallet, friends, invite history, and any rooms you host. This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete Permanently', 
+        {
+          text: 'Delete Permanently',
           style: 'destructive',
-          onPress: async () => {
-            if (activeSession) exitActiveSession();
-            try {
-              const { deleteUser } = await import('firebase/auth');
-              const { auth } = await import('@/src/lib/firebase');
-              const { getDatabase, ref, remove } = await import('firebase/database');
-              const user = auth.currentUser;
-              if (user) {
-                // Delete user data from RTDB
-                const db = getDatabase();
-                await remove(ref(db, `users/${user.uid}`));
-                // Delete the Firebase Auth account
-                await deleteUser(user);
-              }
-            } catch (e: any) {
-              console.warn('Account deletion error:', e.message);
-            }
-            signOut();
-            safeBack();
-          }
-        }
+          onPress: () => {
+            // Second confirmation — App Store reviewers expect a deliberate flow.
+            Alert.alert(
+              'Are you sure?',
+              'There is no recovery. Your username, stars, and Premium entitlement will be removed.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Yes, delete my account',
+                  style: 'destructive',
+                  onPress: async () => {
+                    if (isDeleting) return;
+                    setIsDeleting(true);
+                    if (activeSession) exitActiveSession();
+                    try {
+                      // Server-authoritative wipe (friendships, rooms, presence,
+                      // wallet, invite stats, RC mirror, auth record).
+                      const { httpsCallable } = await import('firebase/functions');
+                      const { functions, auth } = await import('@/src/lib/firebase');
+                      const fn = httpsCallable(functions, 'deleteAccount');
+                      await fn({});
+                      // After deleteAccount succeeds the auth record is gone;
+                      // signOut clears local state regardless.
+                      try { await auth.signOut(); } catch {}
+                    } catch (e: any) {
+                      Alert.alert('Could not delete account', e?.message || 'Try again in a moment.');
+                      setIsDeleting(false);
+                      return;
+                    }
+                    await signOut().catch(() => {});
+                    setIsDeleting(false);
+                    router.replace('/onboarding');
+                  },
+                },
+              ]
+            );
+          },
+        },
       ]
     );
   };
@@ -365,9 +384,9 @@ export default function ProfileScreen() {
         <Text style={styles.logoutBtnText}>Log Out</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.deleteBtn} onPress={handleDeleteAccount}>
+      <TouchableOpacity style={styles.deleteBtn} onPress={handleDeleteAccount} disabled={isDeleting}>
         <Ionicons name="trash" size={20} color={Colors.red} />
-        <Text style={styles.deleteBtnText}>Delete Account</Text>
+        <Text style={styles.deleteBtnText}>{isDeleting ? 'Deleting…' : 'Delete Account'}</Text>
       </TouchableOpacity>
     </SurfaceCard>
   );

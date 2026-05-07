@@ -1,5 +1,5 @@
 import { Colors } from '@/src/theme/Colors';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, ActivityIndicator, Share } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +17,17 @@ export default function LobbyScreen() {
   const insets = useSafeAreaInsets();
   
   const { currentRoom, isHost, localPlayerId, leaveRoom, startGame, error } = useMultiplayerStore();
+
+  // Track how long we've been waiting for the room snapshot so we can surface
+  // a real "connection took too long" UX instead of an infinite spinner.
+  const [connectStart] = useState<number>(() => Date.now());
+  const [waitedTooLong, setWaitedTooLong] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (currentRoom) return;
+    const t = setTimeout(() => setWaitedTooLong(true), 12_000);
+    return () => clearTimeout(t);
+  }, [currentRoom]);
 
   const gameKey = currentRoom ? Object.keys(Games).find(key => Games[key].id === currentRoom.gameId) : null;
   const game = gameKey ? Games[gameKey] : null;
@@ -94,11 +105,30 @@ export default function LobbyScreen() {
   };
 
   if (!currentRoom) {
+    const elapsed = Math.round((Date.now() - connectStart) / 1000);
     return (
       <View style={[styles.container, styles.centerContent]}>
         <AppBackgroundView />
-        <ActivityIndicator size="large" color="white" />
-        <Text style={{ color: 'white', marginTop: 10 }}>Connecting...</Text>
+        {!waitedTooLong ? (
+          <>
+            <ActivityIndicator size="large" color="white" />
+            <Text style={{ color: 'white', marginTop: 10 }}>Connecting…</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.5)', marginTop: 4, fontSize: 12 }}>Room {roomCode} • {elapsed}s</Text>
+          </>
+        ) : (
+          <View style={{ alignItems: 'center', paddingHorizontal: 32, gap: 12 }}>
+            <Text style={{ color: 'white', fontSize: 18, fontWeight: '700' }}>Could not reach the room</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.6)', textAlign: 'center', fontSize: 14, lineHeight: 20 }}>
+              The room code may have expired, the host might be offline, or your connection dropped.
+            </Text>
+            <TouchableOpacity
+              style={{ marginTop: 12, backgroundColor: '#007AFF', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 }}
+              onPress={() => router.dismissAll()}
+            >
+              <Text style={{ color: 'white', fontWeight: '700' }}>Back</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     );
   }

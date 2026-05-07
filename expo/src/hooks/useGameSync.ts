@@ -37,10 +37,29 @@ export function useGameSync<T>(
   } = useMultiplayerStore();
 
   const processedKeys = useRef<Set<string>>(new Set());
+  const watermarkLoaded = useRef<string | null>(null);
+
+  // After (re)becoming host, hydrate our processed-action watermark from RTDB
+  // so we don't replay any action the previous host already handled.
+  useEffect(() => {
+    if (!isMultiplayer || !isHost || !roomCode) {
+      watermarkLoaded.current = null;
+      return;
+    }
+    if (watermarkLoaded.current === roomCode) return;
+    let cancelled = false;
+    gameSyncService.loadProcessedActionKeys(roomCode).then((seen) => {
+      if (cancelled) return;
+      for (const k of seen) processedKeys.current.add(k);
+      watermarkLoaded.current = roomCode;
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [isMultiplayer, isHost, roomCode]);
 
   // --- HOST: drain client actions exactly once (de-dup by push key) ---
   useEffect(() => {
     if (!isMultiplayer || !isHost || !onActionReceived || !roomCode) return;
+    if (watermarkLoaded.current !== roomCode) return; // wait for watermark hydration
     const entries = Object.entries(playerActions || {});
     if (entries.length === 0) return;
 
@@ -52,6 +71,9 @@ export function useGameSync<T>(
       } catch (e) {
         console.warn('useGameSync: action handler threw', (e as Error)?.message);
       }
+      // Persist the watermark BEFORE acking the action so a host crash mid-drain
+      // still leaves a trail the next host can resume from.
+      gameSyncService.markActionProcessed(roomCode, key).catch(() => {});
       gameSyncService.ackAction(roomCode, key).catch(() => {});
     }
   }, [playerActions, isHost, isMultiplayer, onActionReceived, roomCode]);

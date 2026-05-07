@@ -79,7 +79,10 @@
           ".write": "auth != null && data.parent().child('hostId').val() == auth.uid",
           "version":       { ".validate": "newData.isNumber() && (!data.exists() || newData.val() >= data.val())" },
           "phase":         { ".validate": "newData.isString() && newData.val().length <= 32" },
-          "lastUpdatedAt": { ".validate": "newData.isNumber()" }
+          "lastUpdatedAt": { ".validate": "newData.isNumber()" },
+          "turnData": {
+            ".validate": "!newData.exists() || newData.isString() == false"
+          }
         },
 
         "actions": {
@@ -136,6 +139,19 @@
       ".read": false,
       ".write": false
     },
+
+    "blockedUsers": {
+      "$uid": {
+        ".read":  "auth != null && auth.uid == $uid",
+        ".write": false
+      }
+    },
+
+    "reports":       { ".read": false, ".write": false },
+    "reportsDedup":  { ".read": false, ".write": false },
+    "reportCounts":  { ".read": false, ".write": false },
+    "rateLimits":    { ".read": false, ".write": false },
+    "crashLogs":     { ".read": false, ".write": "auth != null" },
 
     "metrics": {
       ".read": false,

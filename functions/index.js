@@ -49,6 +49,30 @@ const ROOM_TTL_WAITING_MS = 30 * 60 * 1000;     // 30 min waiting → GC
 const ROOM_TTL_PLAYING_MS = 6 * 60 * 60 * 1000;  // 6h playing → GC
 const ROOM_TTL_CLOSED_MS  = 5 * 60 * 1000;       // 5 min closed → GC
 
+// ──────────────────────── Rate-limit helper ────────────────────────
+
+/**
+ * Token-bucket-ish guard backed by RTDB. Bumps a per-uid counter at
+ * `rateLimits/$key/$uid` and rejects if the caller exceeds `max` calls in the
+ * trailing `windowMs`. Cheap, transactional, and good enough to keep abuse
+ * vectors closed without standing up a dedicated rate-limit service.
+ */
+async function rateLimit(uid, key, max, windowMs) {
+  const ref = admin.database().ref(`rateLimits/${key}/${uid}`);
+  const now = Date.now();
+  const result = await ref.transaction((cur) => {
+    const c = cur || { count: 0, windowStart: now };
+    if (now - (c.windowStart || 0) > windowMs) {
+      return { count: 1, windowStart: now };
+    }
+    return { count: (c.count || 0) + 1, windowStart: c.windowStart || now };
+  });
+  const count = result.snapshot.val()?.count || 0;
+  if (count > max) {
+    throw new HttpsError('resource-exhausted', 'Too many requests, slow down.');
+  }
+}
+
 // ──────────────────────── Moderation ────────────────────────
 
 const UNSAFE_PATTERNS = [
@@ -154,6 +178,7 @@ exports.generateCard = onCall(
 exports.recordHostMigration = onCall({ cors: true }, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+  await rateLimit(uid, 'recordHostMigration', 60, 60 * 1000);
   const roomCode = String(request.data?.roomCode || '').slice(0, 12);
   const reason = String(request.data?.reason || 'host_gone').slice(0, 32);
   const day = new Date().toISOString().split('T')[0];
@@ -208,6 +233,7 @@ exports.claimDailyReward = onCall({ cors: true }, async (request) => {
 exports.redeemInvite = onCall({ cors: true }, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+  await rateLimit(uid, 'redeemInvite', 5, 60 * 60 * 1000);
 
   const raw = String(request.data?.code || '').trim().toUpperCase();
   if (!raw || raw.length < 4 || raw.length > 12) {
@@ -379,6 +405,8 @@ exports.searchUsers = onCall({ cors: true }, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
 
+  await rateLimit(uid, 'searchUsers', 30, 60 * 1000);
+
   const query = String(request.data?.query || '').trim().toLowerCase();
   if (query.length < 2) return { results: [] };
 
@@ -450,4 +478,180 @@ exports.sweepStaleRooms = onSchedule('every 10 minutes', async () => {
   });
 
   console.log(`sweepStaleRooms: removed ${removed} room(s).`);
+});
+
+// ──────────────────────── reportUser / blockUser / unblockUser ────────────────────────
+
+const REPORT_REASONS = new Set([
+  'harassment', 'hate_speech', 'sexual_content', 'spam',
+  'cheating', 'underage', 'other',
+]);
+
+/**
+ * Submit a UGC report against another user. App-Store-required moderation
+ * surface for any social product. We dedupe by (reporter, target, day) so a
+ * spammer cannot flood the queue against the same person, but multiple
+ * distinct reporters CAN still pile on (signal we want to keep for review).
+ */
+exports.reportUser = onCall({ cors: true }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+  await rateLimit(uid, 'reportUser', 10, 60 * 60 * 1000);
+
+  const targetUid = String(request.data?.targetUid || '').trim();
+  const reason = String(request.data?.reason || '');
+  const context = String(request.data?.context || '').slice(0, 500);
+
+  if (!targetUid || targetUid === uid) {
+    throw new HttpsError('invalid-argument', 'Invalid target.');
+  }
+  if (!REPORT_REASONS.has(reason)) {
+    throw new HttpsError('invalid-argument', 'Invalid reason.');
+  }
+
+  const day = new Date().toISOString().split('T')[0];
+  const dedupKey = `${uid}_${targetUid}_${day}`;
+  const dedupRef = admin.database().ref(`reportsDedup/${dedupKey}`);
+  const dedupResult = await dedupRef.transaction((cur) => (cur ? undefined : Date.now()));
+  if (!dedupResult.committed) {
+    return { ok: true, deduplicated: true };
+  }
+
+  await admin.database().ref('reports').push({
+    reporterUid: uid,
+    targetUid,
+    reason,
+    context,
+    at: Date.now(),
+    status: 'pending',
+  });
+
+  // Bump per-target counter for the admin dashboard.
+  await admin.database().ref(`reportCounts/${targetUid}`).transaction((c) => (c || 0) + 1);
+
+  return { ok: true };
+});
+
+exports.blockUser = onCall({ cors: true }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+  await rateLimit(uid, 'blockUser', 60, 60 * 60 * 1000);
+
+  const targetUid = String(request.data?.targetUid || '').trim();
+  if (!targetUid || targetUid === uid) {
+    throw new HttpsError('invalid-argument', 'Invalid target.');
+  }
+
+  const updates = {};
+  updates[`blockedUsers/${uid}/${targetUid}`] = { at: Date.now() };
+  // Tear down any existing friendship from both sides.
+  updates[`friendships/${uid}/${targetUid}`] = null;
+  updates[`friendships/${targetUid}/${uid}`] = null;
+  await admin.database().ref().update(updates);
+  return { ok: true };
+});
+
+exports.unblockUser = onCall({ cors: true }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+  const targetUid = String(request.data?.targetUid || '').trim();
+  if (!targetUid) throw new HttpsError('invalid-argument', 'Invalid target.');
+  await admin.database().ref(`blockedUsers/${uid}/${targetUid}`).remove();
+  return { ok: true };
+});
+
+// ──────────────────────── deleteAccount ────────────────────────
+
+/**
+ * Self-service account deletion (App Store requirement § 5.1.1(v)).
+ *
+ * Wipes every user-owned RTDB/Firestore footprint we can identify, revokes
+ * all auth sessions, and finally deletes the auth record. The client signs
+ * out and clears local state once this resolves.
+ *
+ * NOTE: anything we don't enumerate here (e.g. future paths) survives the
+ * deletion. Keep this list in sync with the rules schema.
+ */
+exports.deleteAccount = onCall({ cors: true }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+  await rateLimit(uid, 'deleteAccount', 3, 24 * 60 * 60 * 1000);
+
+  const db = admin.database();
+
+  // 1. Tear down friendship edges from both sides.
+  const friendshipsSnap = await db.ref(`friendships/${uid}`).once('value');
+  const friendUpdates = {};
+  if (friendshipsSnap.exists()) {
+    for (const fid of Object.keys(friendshipsSnap.val() || {})) {
+      friendUpdates[`friendships/${fid}/${uid}`] = null;
+    }
+  }
+  friendUpdates[`friendships/${uid}`] = null;
+
+  // 2. Cancel friend requests touching this user.
+  const reqsSnap = await db.ref('friendRequests').once('value');
+  if (reqsSnap.exists()) {
+    const reqs = reqsSnap.val() || {};
+    for (const [rid, r] of Object.entries(reqs)) {
+      if (r && (r.fromUserId === uid || r.toUserId === uid)) {
+        friendUpdates[`friendRequests/${rid}`] = null;
+      }
+    }
+  }
+
+  // 3. Drop blockedUsers (both sides).
+  friendUpdates[`blockedUsers/${uid}`] = null;
+  const blockedBySnap = await db.ref('blockedUsers').once('value');
+  if (blockedBySnap.exists()) {
+    const all = blockedBySnap.val() || {};
+    for (const [actor, list] of Object.entries(all)) {
+      if (list && typeof list === 'object' && list[uid]) {
+        friendUpdates[`blockedUsers/${actor}/${uid}`] = null;
+      }
+    }
+  }
+
+  // 4. Wipe presence + AI usage history + invite ownership.
+  friendUpdates[`presence/${uid}`] = null;
+  friendUpdates[`aiUsage/${uid}`] = null;
+  friendUpdates[`crashLogs/${uid}`] = null;
+  friendUpdates[`rateLimits/searchUsers/${uid}`] = null;
+  friendUpdates[`rateLimits/redeemInvite/${uid}`] = null;
+  friendUpdates[`rateLimits/reportUser/${uid}`] = null;
+  friendUpdates[`rateLimits/blockUser/${uid}`] = null;
+  friendUpdates[`rateLimits/deleteAccount/${uid}`] = null;
+
+  // 5. Drop hosted rooms — guests get bounced cleanly via the existing
+  //    closed/sweeper flow.
+  const roomsSnap = await db.ref('rooms').once('value');
+  if (roomsSnap.exists()) {
+    const rooms = roomsSnap.val() || {};
+    for (const [code, room] of Object.entries(rooms)) {
+      if (!room) continue;
+      if (room.hostId === uid) {
+        friendUpdates[`rooms/${code}`] = null;
+      } else if (room.players && room.players[uid]) {
+        friendUpdates[`rooms/${code}/players/${uid}`] = null;
+        friendUpdates[`rooms/${code}/presence/${uid}`] = null;
+      }
+    }
+  }
+
+  // 6. Delete the user node last so other paths can be enumerated first.
+  friendUpdates[`users/${uid}`] = null;
+
+  await db.ref().update(friendUpdates);
+
+  // 7. Firestore mirror.
+  try { await admin.firestore().collection('users').doc(uid).delete(); } catch {}
+
+  // 8. Revoke all sessions and delete the auth record.
+  try { await admin.auth().revokeRefreshTokens(uid); } catch {}
+  try { await admin.auth().deleteUser(uid); } catch (e) {
+    // If the user was already deleted (rare race) treat as success.
+    if (e?.code !== 'auth/user-not-found') throw e;
+  }
+
+  return { ok: true };
 });

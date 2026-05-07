@@ -21,6 +21,8 @@ import { useAudioPreload } from '@/src/hooks/useAudioPreload';
 import { ToastOverlay } from '@/src/components/ToastOverlay';
 import { RootErrorBoundary } from '@/src/components/ErrorBoundary';
 import { setUserOnline, setUserOffline } from '@/src/lib/firebase';
+import { Observability } from '@/src/services/Observability';
+import { useMultiplayerStore } from '@/src/store/useMultiplayerStore';
 
 export const unstable_settings = {
   initialRouteName: '(tabs)',
@@ -54,6 +56,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     setIsMounted(true);
+    Observability.install();
     initialize();
   }, [initialize]);
 
@@ -79,6 +82,13 @@ export default function RootLayout() {
         setUserOnline(uid);
       } else if (nextState.match(/inactive|background/)) {
         setUserOffline(uid);
+        // Hard-leave any active multiplayer room on background so we don't leak
+        // ghost players + heartbeats while the app is suspended. The user can
+        // rejoin via the room code if they come back inside the TTL window.
+        const mp = useMultiplayerStore.getState();
+        if (mp.roomCode) {
+          mp.leaveRoom().catch(() => {});
+        }
       }
       appState.current = nextState;
     });

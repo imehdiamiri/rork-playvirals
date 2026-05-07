@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Share, Platform } from 'react-native';
 import { Colors } from '@/src/theme/Colors';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
@@ -26,6 +26,10 @@ interface Props {
   title?: string;
   subtitle?: string;
   trophyColor?: string;
+  /** When provided, renders a primary "Play Again" CTA under the scoreboard. */
+  onPlayAgain?: () => void;
+  /** Game name used in the share-card text; enables a share button when set. */
+  shareGameName?: string;
 }
 
 export function ResultsScoreboard({
@@ -33,7 +37,22 @@ export function ResultsScoreboard({
   title = 'Final Results',
   subtitle,
   trophyColor = Colors.yellow,
+  onPlayAgain,
+  shareGameName,
 }: Props) {
+  const handleShare = async () => {
+    if (!shareGameName) return;
+    try {
+      const winner = entries[0];
+      const lines = [
+        `🏆 ${winner?.name ?? 'I'} won ${shareGameName} on PartyBot!`,
+        `${winner?.primary ?? ''}`.trim(),
+        '',
+        'Play with friends → https://www.playvirals.com',
+      ].filter(Boolean);
+      await Share.share({ message: lines.join('\n') });
+    } catch {}
+  };
   return (
     <View style={styles.wrap}>
       <View style={styles.header}>
@@ -41,6 +60,23 @@ export function ResultsScoreboard({
         <Text style={styles.title}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
+
+      {(onPlayAgain || shareGameName) && (
+        <View style={styles.ctas}>
+          {onPlayAgain && (
+            <TouchableOpacity style={styles.playAgainBtn} onPress={onPlayAgain} accessibilityRole="button">
+              <IconSymbol name="arrow.clockwise" size={16} color="white" />
+              <Text style={styles.playAgainText}>Play Again</Text>
+            </TouchableOpacity>
+          )}
+          {shareGameName && (
+            <TouchableOpacity style={styles.shareBtn} onPress={handleShare} accessibilityRole="button">
+              <IconSymbol name="square.and.arrow.up" size={16} color="white" />
+              <Text style={styles.shareText}>Share</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       <View style={styles.list}>
         {entries.map((entry, idx) => (
@@ -96,4 +132,18 @@ const styles = StyleSheet.create({
   secondary: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 2 },
   primary: { color: 'white', fontSize: 18, fontWeight: 'bold' },
   primaryWinner: { color: Colors.green },
+  ctas: { flexDirection: 'row', gap: 10 },
+  playAgainBtn: {
+    flex: 1.4, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 14, borderRadius: 16, backgroundColor: Colors.green,
+  },
+  playAgainText: { color: 'white', fontSize: 16, fontWeight: '700' },
+  shareBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 14, borderRadius: 16, backgroundColor: 'rgba(0,122,255,0.85)',
+  },
+  shareText: { color: 'white', fontSize: 16, fontWeight: '700' },
 });
+
+// Re-export Platform so callers can detect ios-only behaviours if needed.
+export { Platform };

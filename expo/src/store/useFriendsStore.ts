@@ -95,6 +95,14 @@ export const useFriendsStore = create<FriendsState>()(
           return;
         }
         set({ isSearching: true });
+        // Pre-load the local block list so we can filter blocked users out of
+        // search/invite surfaces. App Store moderation requires that blocked
+        // users disappear from social entry points.
+        let blockedSet = new Set<string>();
+        try {
+          const { moderationService } = await import('../services/ModerationService');
+          blockedSet = new Set(await moderationService.listBlocked());
+        } catch {}
         try {
           let rawResults: Array<{ id: string; username: string; email?: string; avatarURL?: string }> = [];
 
@@ -125,9 +133,9 @@ export const useFriendsStore = create<FriendsState>()(
             }
           }
 
-          // Enrich with relationship state
+          // Enrich with relationship state (and hide blocked users entirely).
           const results: FriendSearchResult[] = rawResults
-            .filter(r => r.id !== currentUserId)
+            .filter(r => r.id !== currentUserId && !blockedSet.has(r.id))
             .slice(0, 20)
             .map(r => {
               const friends = get().onlineFriends;
