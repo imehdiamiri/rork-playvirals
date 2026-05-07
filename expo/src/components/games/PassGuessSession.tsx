@@ -261,7 +261,7 @@ export function PassGuessSession({ session }: Props) {
         </Text>
         
         <Pressable style={[styles.primaryBtn, { backgroundColor: color, marginTop: 40 }]} onPress={handlePrivacyReady}>
-          <Text style={styles.primaryBtnText}>I'm Ready</Text>
+          <Text style={styles.primaryBtnText}>I&apos;m Ready</Text>
         </Pressable>
       </View>
     );

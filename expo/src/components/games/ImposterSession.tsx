@@ -237,7 +237,7 @@ export function ImposterSession({ session }: Props) {
                   <>
                     <IconSymbol name="theatermasks.fill" size={64} color="#FF2D55" />
                     <Text style={[styles.roleTitle, { color: '#FF2D55' }]}>You are the Imposter!</Text>
-                    <Text style={styles.roleSubtitle}>Blend in. Don't get caught.</Text>
+                    <Text style={styles.roleSubtitle}>Blend in. Don&apos;t get caught.</Text>
                   </>
                 ) : (
                   <>
@@ -309,7 +309,7 @@ export function ImposterSession({ session }: Props) {
           <View style={styles.card}>
             <View style={styles.centerItems}>
               <IconSymbol name="magnifyingglass.circle.fill" size={48} color="#AF52DE" />
-              <Text style={styles.title}>{currentPlayer?.displayName}'s Clue</Text>
+              <Text style={styles.title}>{currentPlayer?.displayName}&apos;s Clue</Text>
               <Text style={styles.subtitle}>Give a one-word clue about the secret word</Text>
             </View>
 
@@ -345,7 +345,7 @@ export function ImposterSession({ session }: Props) {
                   return (
                     <View key={pid} style={styles.resultRow}>
                       <Text style={[styles.resultName, { color: getPlayerColor(idx) }]}>{player?.displayName}</Text>
-                      <Text style={{ color: 'white', fontSize: 15, fontWeight: '600' }}>"{clue}"</Text>
+                      <Text style={{ color: 'white', fontSize: 15, fontWeight: '600' }}>&quot;{clue}&quot;</Text>
                     </View>
                   );
                 })}
@@ -360,7 +360,7 @@ export function ImposterSession({ session }: Props) {
           <View style={styles.card}>
             <View style={styles.centerItems}>
               <IconSymbol name="hand.raised.fill" size={48} color="#FF2D55" />
-              <Text style={styles.title}>{currentPlayer?.displayName}'s Vote</Text>
+              <Text style={styles.title}>{currentPlayer?.displayName}&apos;s Vote</Text>
               <Text style={styles.subtitle}>Who do you think is the Imposter?</Text>
             </View>
             

@@ -222,7 +222,7 @@ export function TapInOrderSession({ session }: Props) {
           <Text style={st.title}>Pass the Phone</Text>
           <Text style={st.sub}>Give to {players[playerIndex + 1]?.displayName}</Text>
           <Pressable style={[st.btn, { marginTop: 40 }]} onPress={() => { setPlayerIndex(i => i+1); setPhase('ready'); }}>
-            <Text style={st.btnTx}>I'm Ready</Text>
+            <Text style={st.btnTx}>I&apos;m Ready</Text>
           </Pressable>
         </View>
       </View>

@@ -232,7 +232,7 @@ export function ColorTrapSession({ session }: Props) {
         {/* Header: forbidden color + hearts */}
         <View style={st.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={st.headerTx}>Don't tap</Text>
+            <Text style={st.headerTx}>Don&apos;t tap</Text>
             <View style={[st.forbiddenDot, { backgroundColor: PALETTE[forbiddenIdx] }]} />
             <Text style={[st.headerTx, { color: PALETTE[forbiddenIdx], fontWeight: 'bold' }]}>{PALETTE_NAMES[forbiddenIdx]}</Text>
           </View>

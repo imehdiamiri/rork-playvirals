@@ -161,7 +161,7 @@ export function DrawRushSession({ session }: Props) {
         <View style={[st.iconBox,{backgroundColor:'rgba(0,122,255,0.14)'}]}><IconSymbol name="pencil.and.scribble" size={52} color="#007AFF" /></View>
         <Text style={st.title}>Round {drawerIdx+1} of {players.length}</Text>
         <Text style={[st.sub,{fontSize:22,color:'#007AFF',fontWeight:'bold',marginTop:12}]}>{drawer.displayName} draws!</Text>
-        <Text style={st.hint}>Everyone else will guess what's being drawn. 60s per turn.</Text>
+        <Text style={st.hint}>Everyone else will guess what&apos;s being drawn. 60s per turn.</Text>
         <Pressable style={st.btn} onPress={() => setPhase('drawerReveal')}><Text style={st.btnTx}>Continue</Text></Pressable>
       </View></View>
     );
@@ -220,7 +220,7 @@ export function DrawRushSession({ session }: Props) {
     return (
       <View style={st.container}><View style={st.center}>
         <IconSymbol name="hand.raised.fill" size={52} color={Colors.orange} />
-        <Text style={st.title}>Time's Up!</Text>
+        <Text style={st.title}>Time&apos;s Up!</Text>
         <Text style={st.sub}>Pass the phone to the guessers.</Text>
         <Text style={st.hint}>Each player will type their guess one at a time.</Text>
         <Pressable style={st.btn} onPress={handleStartGuessing}><Text style={st.btnTx}>Start Guessing</Text></Pressable>
@@ -233,7 +233,7 @@ export function DrawRushSession({ session }: Props) {
     return (
       <View style={st.container}>
         <View style={{padding:16,flex:1}}>
-          <Text style={st.title}>{currentGuesser?.displayName}'s Guess</Text>
+          <Text style={st.title}>{currentGuesser?.displayName}&apos;s Guess</Text>
           <Text style={[st.sub,{marginBottom:16}]}>Look at the drawing and type your answer</Text>
           <View style={[st.canvas,{width:canvasSize,height:canvasSize*0.6}]}>
             <Svg width={canvasSize} height={canvasSize*0.6} style={{backgroundColor:'#1C1C1E',borderRadius:16}}>
@@ -284,7 +284,7 @@ export function DrawRushSession({ session }: Props) {
       <View style={st.container}>
         <ScrollView contentContainerStyle={{padding:16,paddingBottom:40}}>
           <Text style={[st.title,{textAlign:'center'}]}>Round Results</Text>
-          <Text style={[st.sub,{textAlign:'center'}]}>The word was "{concept}" — {correct}/{answers.length} correct</Text>
+          <Text style={[st.sub,{textAlign:'center'}]}>The word was &quot;{concept}&quot; — {correct}/{answers.length} correct</Text>
           {sorted.map((p,i) => (
             <View key={p.id} style={[st.rankRow,i===0&&st.rankFirst]}>
               <Text style={st.rankNum}>{i+1}</Text>

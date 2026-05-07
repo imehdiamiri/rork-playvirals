@@ -200,7 +200,7 @@ export function TenTangleSession({ session }: Props) {
         <View style={st.scenarioCard}>
           <Text style={st.scenarioText}>{scenario}</Text>
         </View>
-        <Text style={st.hint}>Each player acts out this scenario at their number's intensity level.</Text>
+        <Text style={st.hint}>Each player acts out this scenario at their number&apos;s intensity level.</Text>
         <Pressable style={st.btn} onPress={handleStartActing}><Text style={st.btnTx}>Start Acting!</Text></Pressable>
       </View></View>
     );
@@ -224,7 +224,7 @@ export function TenTangleSession({ session }: Props) {
     return (
       <View style={st.container}>
         <ScrollView contentContainerStyle={st.scrollPad}>
-          <Text style={[st.title, { textAlign: 'center' }]}>{guesser.displayName}'s Guesses</Text>
+          <Text style={[st.title, { textAlign: 'center' }]}>{guesser.displayName}&apos;s Guesses</Text>
           <Text style={[st.sub, { textAlign: 'center', marginBottom: 20 }]}>Assign each player their number</Text>
           {nonGuessers.map(p => (
             <View key={p.id} style={st.guessRow}>
