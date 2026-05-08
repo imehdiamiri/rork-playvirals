@@ -100,7 +100,7 @@ export default function GameDetailScreen() {
       </View>
 
       <ScrollView 
-        contentContainerStyle={[styles.scrollContent, { paddingTop: Platform.OS === 'android' ? insets.top + 60 : 0 }]}
+        contentContainerStyle={styles.scrollContent}
         contentInsetAdjustmentBehavior="automatic"
       >
         
@@ -414,17 +414,17 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   stepBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   stepBadgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
   },
   instructionText: {
     flex: 1,
