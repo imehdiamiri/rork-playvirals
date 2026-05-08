@@ -43,8 +43,11 @@ const ART = {
   bored: 'https://r2-pub.rork.com/generated-images/887d480d-37d8-4646-b306-8531133f8237.png',
   party: 'https://r2-pub.rork.com/generated-images/195f16b6-497b-4089-8f5c-fc7982e30b38.png',
   portrait: 'https://r2-pub.rork.com/generated-images/76517523-6ca3-46d5-b2d1-012f8813e451.png',
-  hero: 'https://r2-pub.rork.com/generated-images/d2aaae07-e8bd-4bd3-8d7e-4e266773cff7.png',
+  hero: 'https://r2-pub.rork.com/generated-images/a0d45039-0598-4998-a8a5-645cb9bc08d0.png',
 } as const;
+
+export const PARTYBOT_LOGO_URL = 'https://r2-pub.rork.com/generated-images/d401e9bf-01ae-407a-ac97-815f7e629435.png';
+export const PARTYBOT_MASCOT_URL = 'https://r2-pub.rork.com/generated-images/a0d45039-0598-4998-a8a5-645cb9bc08d0.png';
 
 type PageTheme = {
   accent: string;
@@ -263,10 +266,7 @@ export default function OnboardingScreen() {
             {THEMES.map((theme, i) => (
               <View key={i} style={[styles.page, { paddingTop: insets.top + 16 }]}>
                 <View style={styles.brandRow}>
-                  <LiquidGlass variant="mid" radius={999} style={styles.brandPill} shadow={false}>
-                    <View style={[styles.brandDot, { backgroundColor: theme.accent }]} />
-                    <Text style={styles.brandText}>PartyBot</Text>
-                  </LiquidGlass>
+                  <Image source={{ uri: PARTYBOT_LOGO_URL }} style={styles.brandLogo} resizeMode="contain" />
                   {i < 3 && (
                     <Pressable onPress={() => goToPage(3)} hitSlop={12} style={styles.skipBtn}>
                       <Text style={styles.skipText}>Skip</Text>
@@ -412,9 +412,7 @@ const styles = StyleSheet.create({
   page: { width: SCREEN_WIDTH, flex: 1, paddingHorizontal: 24, paddingBottom: 200, alignItems: 'center', justifyContent: 'flex-start' },
 
   brandRow: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  brandPill: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 8 },
-  brandDot: { width: 8, height: 8, borderRadius: 4 },
-  brandText: { color: '#fff', fontFamily: 'Viral-Black', fontSize: 14, letterSpacing: 0.5 },
+  brandLogo: { width: 110, height: 44 },
   skipBtn: { paddingHorizontal: 12, paddingVertical: 8 },
   skipText: { color: 'rgba(255,255,255,0.55)', fontSize: 14, fontWeight: '600' },
 

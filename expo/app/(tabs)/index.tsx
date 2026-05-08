@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Platform, LayoutChangeEvent } from 'react-native';
+import { StyleSheet, View, Text, Image, ScrollView, TouchableOpacity, Platform, LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -39,7 +39,13 @@ export default function GamesScreen() {
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 6, paddingBottom: 120 }]} onLayout={(e: LayoutChangeEvent) => setContainerWidth(e.nativeEvent.layout.width - 32)}>
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>PartyBot</Text>
+            <Image
+              source={{ uri: 'https://r2-pub.rork.com/generated-images/d401e9bf-01ae-407a-ac97-815f7e629435.png' }}
+              style={styles.logo}
+              resizeMode="contain"
+              accessibilityLabel="PartyBot"
+            />
+            <Text style={[styles.title, { display: 'none' }]}>PartyBot</Text>
           </View>
           <TouchableOpacity onPress={() => router.push('/lobby/join')} activeOpacity={0.85}>
             <LiquidGlass variant="high" radius={20} style={styles.joinButton} shadow={false}>

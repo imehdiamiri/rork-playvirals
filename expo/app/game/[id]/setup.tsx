@@ -47,15 +47,15 @@ export default function GameSetupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { startSingleDeviceSession } = useGameStore();
-  const { lastGameConfigs, lastPlayerNames, saveGameConfig } = useSettingsStore();
+  const { lastGameConfigs, lastPlayerNames, saveGameConfig, playerName } = useSettingsStore();
   const { offlineFriends } = useFriendsStore();
   
   const gameKey = Object.keys(Games).find(key => Games[key].id === id);
   const game = gameKey ? Games[gameKey] : null;
 
-  // Default player names from offline friends
+  // Default player names: Player 1 = the user's onboarding name; everyone else is blank.
   const getDefaultPlayerNames = (count: number): string[] => {
-    return Array.from({ length: count }, (_, i) => offlineFriends[i]?.name || '');
+    return Array.from({ length: count }, (_, i) => (i === 0 ? (playerName || '') : ''));
   };
 
   const [playerCount, setPlayerCount] = useState(game ? Math.max(game.minPlayers, Math.min(2, game.maxPlayers)) : 2);
@@ -256,10 +256,7 @@ export default function GameSetupScreen() {
           onUpdateCount={(count) => {
             setPlayerCount(count);
             if (count > playerNames.length) {
-              const newNames = Array.from({ length: count - playerNames.length }, (_, i) => {
-                const idx = playerNames.length + i;
-                return offlineFriends[idx]?.name || '';
-              });
+              const newNames = Array.from({ length: count - playerNames.length }, () => '');
               setPlayerNames([...playerNames, ...newNames]);
             } else {
               setPlayerNames(playerNames.slice(0, count));
