@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, useWindowDimensions } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { Colors } from '@/src/theme/Colors';
 import { GameSession } from '@/src/store/useGameStore';
@@ -9,7 +9,16 @@ import * as Haptics from '@/src/utils/safeHaptics';
 
 interface Props { session: GameSession; }
 
-type Phase = 'ready' | 'countdown' | 'flash' | 'input' | 'correct' | 'wrong' | 'playerComplete' | 'results';
+type Phase =
+  | 'difficulty'
+  | 'ready'
+  | 'countdown'
+  | 'flash'
+  | 'input'
+  | 'correct'
+  | 'wrong'
+  | 'playerComplete'
+  | 'results';
 
 interface PlayerRecord {
   playerId: string;
@@ -19,16 +28,84 @@ interface PlayerRecord {
 
 const ACCENT = '#5AC8FA';
 
-/** Round difficulty: digits + display ms. Index = round number - 1. */
-function roundConfig(round: number): { digits: number; ms: number } {
-  const digits = Math.min(8, 3 + Math.floor((round - 1) / 2));
-  const ms = Math.max(400, 1200 - (round - 1) * 80);
+type DifficultyId = 'easy' | 'medium' | 'hard' | 'expert';
+
+interface DifficultyDef {
+  id: DifficultyId;
+  name: string;
+  emoji: string;
+  description: string;
+  baseDigits: number;
+  baseMs: number;
+  /** Step (digits added every X rounds). Higher = faster ramp. */
+  digitsPerStep: number;
+  /** Ms shaved off per round. */
+  msStep: number;
+  /** Floor for display ms. */
+  minMs: number;
+  /** Cap for digit count. */
+  maxDigits: number;
+}
+
+const DIFFICULTIES: DifficultyDef[] = [
+  {
+    id: 'easy',
+    name: 'Easy',
+    emoji: '🌱',
+    description: '3 digits · 1.4s flash · gentle ramp',
+    baseDigits: 3,
+    baseMs: 1400,
+    digitsPerStep: 3,
+    msStep: 60,
+    minMs: 700,
+    maxDigits: 7,
+  },
+  {
+    id: 'medium',
+    name: 'Medium',
+    emoji: '⚡',
+    description: '3 digits · 1.0s flash · steady ramp',
+    baseDigits: 3,
+    baseMs: 1000,
+    digitsPerStep: 2,
+    msStep: 70,
+    minMs: 500,
+    maxDigits: 8,
+  },
+  {
+    id: 'hard',
+    name: 'Hard',
+    emoji: '🔥',
+    description: '4 digits · 0.7s flash · fast ramp',
+    baseDigits: 4,
+    baseMs: 700,
+    digitsPerStep: 2,
+    msStep: 60,
+    minMs: 350,
+    maxDigits: 9,
+  },
+  {
+    id: 'expert',
+    name: 'Expert',
+    emoji: '👁️',
+    description: '5 digits · 0.45s flash · brutal',
+    baseDigits: 5,
+    baseMs: 450,
+    digitsPerStep: 2,
+    msStep: 50,
+    minMs: 220,
+    maxDigits: 10,
+  },
+];
+
+function roundConfig(def: DifficultyDef, round: number): { digits: number; ms: number } {
+  const digits = Math.min(def.maxDigits, def.baseDigits + Math.floor((round - 1) / def.digitsPerStep));
+  const ms = Math.max(def.minMs, def.baseMs - (round - 1) * def.msStep);
   return { digits, ms };
 }
 
 function generateNumber(digits: number): string {
   let s = '';
-  // First digit: 1-9 (avoid leading zero)
   s += String(1 + Math.floor(Math.random() * 9));
   for (let i = 1; i < digits; i++) {
     s += String(Math.floor(Math.random() * 10));
@@ -38,7 +115,9 @@ function generateNumber(digits: number): string {
 
 export function EyeSightSession({ session }: Props) {
   const players = session.players;
-  const [phase, setPhase] = useState<Phase>('ready');
+  const { width: screenWidth } = useWindowDimensions();
+  const [phase, setPhase] = useState<Phase>('difficulty');
+  const [difficulty, setDifficulty] = useState<DifficultyDef>(DIFFICULTIES[1]!);
   const [playerIdx, setPlayerIdx] = useState<number>(0);
   const [round, setRound] = useState<number>(1);
   const [target, setTarget] = useState<string>('');
@@ -50,7 +129,7 @@ export function EyeSightSession({ session }: Props) {
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const player = players[playerIdx];
-  const config = roundConfig(round);
+  const config = roundConfig(difficulty, round);
 
   const flashScale = useSharedValue<number>(0.9);
   const flashOpacity = useSharedValue<number>(0);
@@ -60,6 +139,23 @@ export function EyeSightSession({ session }: Props) {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
+
+  /** Auto-shrink flash font so the number stays on a single line at any digit count. */
+  const flashFontSize = useMemo(() => {
+    const usable = screenWidth - 40;
+    // Approx character width factor for bold tabular digits + letterSpacing.
+    const perCharFactor = 0.62;
+    const ideal = Math.floor(usable / (config.digits * perCharFactor));
+    return Math.max(40, Math.min(110, ideal));
+  }, [config.digits, screenWidth]);
+
+  const flashLetterSpacing = useMemo(() => (config.digits >= 7 ? 2 : config.digits >= 5 ? 4 : 6), [config.digits]);
+
+  const inputFontSize = useMemo(() => {
+    const usable = screenWidth - 80;
+    const ideal = Math.floor(usable / (Math.max(config.digits, 3) * 0.7));
+    return Math.max(28, Math.min(56, ideal));
+  }, [config.digits, screenWidth]);
 
   const updateBest = useCallback((idx: number, r: number, d: number) => {
     setRecords(prev => {
@@ -81,7 +177,6 @@ export function EyeSightSession({ session }: Props) {
     const tick = () => {
       n -= 1;
       if (n <= 0) {
-        // Show flash
         const num = generateNumber(config.digits);
         setTarget(num);
         flashScale.value = 0.9;
@@ -104,9 +199,9 @@ export function EyeSightSession({ session }: Props) {
     timerRef.current = setTimeout(tick, 700);
   }, [config.digits, config.ms, flashOpacity, flashScale]);
 
-  const submitAnswer = () => {
-    if (input.trim().length === 0) return;
-    if (input.trim() === target) {
+  const submitAnswer = useCallback(() => {
+    if (input.length === 0) return;
+    if (input === target) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       updateBest(playerIdx, round, config.digits);
       setPhase('correct');
@@ -114,7 +209,7 @@ export function EyeSightSession({ session }: Props) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setPhase('wrong');
     }
-  };
+  }, [input, target, playerIdx, round, config.digits, updateBest]);
 
   const continueAfterCorrect = () => {
     setRound(round + 1);
@@ -140,13 +235,68 @@ export function EyeSightSession({ session }: Props) {
     setRound(1);
     setInput('');
     setTarget('');
+    setPhase('difficulty');
+  };
+
+  const onPickDifficulty = (def: DifficultyDef) => {
+    Haptics.selectionAsync();
+    setDifficulty(def);
     setPhase('ready');
   };
+
+  const handlePadPress = useCallback((digit: string) => {
+    Haptics.selectionAsync();
+    setInput(prev => (prev.length >= config.digits ? prev : prev + digit));
+  }, [config.digits]);
+
+  const handlePadDelete = useCallback(() => {
+    Haptics.selectionAsync();
+    setInput(prev => prev.slice(0, -1));
+  }, []);
 
   const flashStyle = useAnimatedStyle(() => ({
     opacity: flashOpacity.value,
     transform: [{ scale: flashScale.value }],
   }));
+
+  // ─── DIFFICULTY ───
+  if (phase === 'difficulty') {
+    return (
+      <View style={st.container}>
+        <ScrollView contentContainerStyle={st.readyContent}>
+          <View style={[st.iconBox, { backgroundColor: ACCENT + '26' }]}>
+            <IconSymbol name="eye.fill" size={56} color={ACCENT} />
+          </View>
+          <Text style={st.eyebrow}>EYE SIGHT</Text>
+          <Text style={st.title}>Choose your difficulty</Text>
+          <Text style={st.sub}>Higher levels show numbers for less time and ramp up faster.</Text>
+
+          <View style={st.diffList}>
+            {DIFFICULTIES.map((def) => {
+              const selected = def.id === difficulty.id;
+              return (
+                <Pressable
+                  key={def.id}
+                  onPress={() => onPickDifficulty(def)}
+                  style={[
+                    st.diffCard,
+                    selected && { borderColor: ACCENT, backgroundColor: ACCENT + '14' },
+                  ]}
+                >
+                  <Text style={st.diffEmoji}>{def.emoji}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={st.diffName}>{def.name}</Text>
+                    <Text style={st.diffDesc}>{def.description}</Text>
+                  </View>
+                  <IconSymbol name="chevron.right" size={18} color="rgba(255,255,255,0.5)" />
+                </Pressable>
+              );
+            })}
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
 
   // ─── READY ───
   if (phase === 'ready') {
@@ -157,7 +307,7 @@ export function EyeSightSession({ session }: Props) {
           <View style={[st.iconBox, { backgroundColor: ACCENT + '26' }]}>
             <IconSymbol name="eye.fill" size={56} color={ACCENT} />
           </View>
-          <Text style={st.eyebrow}>{isFirstPlayer ? 'EYE SIGHT' : `PLAYER ${playerIdx + 1} OF ${players.length}`}</Text>
+          <Text style={st.eyebrow}>{isFirstPlayer ? `EYE SIGHT · ${difficulty.name.toUpperCase()}` : `PLAYER ${playerIdx + 1} OF ${players.length}`}</Text>
           <Text style={st.nameTitle} numberOfLines={2}>{player?.displayName ?? 'Player'}</Text>
           <View style={[st.pill, { backgroundColor: ACCENT + '26', borderColor: ACCENT + '4D' }]}>
             <Text style={[st.pillTx, { color: ACCENT }]}>Are you ready?</Text>
@@ -173,7 +323,7 @@ export function EyeSightSession({ session }: Props) {
           <View style={st.rulesCard}>
             <RuleRow num={1} color={ACCENT} text="A countdown of 3, 2, 1 prepares you for the next number." />
             <RuleRow num={2} color={ACCENT} text="A number flashes for a brief moment — watch carefully!" />
-            <RuleRow num={3} color={ACCENT} text="Type what you saw and submit. One wrong answer ends your turn." />
+            <RuleRow num={3} color={ACCENT} text="Tap the number on the keypad and submit. One wrong answer ends your turn." />
           </View>
 
           <Pressable style={[st.startBtn, { backgroundColor: ACCENT }]} onPress={startCountdown}>
@@ -201,40 +351,60 @@ export function EyeSightSession({ session }: Props) {
     return (
       <View style={[st.container, st.fullCenter]}>
         <Text style={st.eyebrow}>ROUND {round}</Text>
-        <Animated.Text style={[st.flashNumber, flashStyle]}>{target}</Animated.Text>
+        <Animated.Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          style={[
+            st.flashNumber,
+            { fontSize: flashFontSize, letterSpacing: flashLetterSpacing },
+            flashStyle,
+          ]}
+        >
+          {target}
+        </Animated.Text>
       </View>
     );
   }
 
   // ─── INPUT ───
   if (phase === 'input') {
+    const slots: string[] = [];
+    for (let i = 0; i < config.digits; i++) slots.push(input[i] ?? '');
     return (
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={st.container}>
-        <ScrollView contentContainerStyle={st.readyContent} keyboardShouldPersistTaps="handled">
+      <View style={st.container}>
+        <View style={st.inputTop}>
           <Text style={st.eyebrow}>ROUND {round} · {config.digits} DIGITS</Text>
           <Text style={st.title}>What did you see?</Text>
-          <Text style={st.sub}>Type the number exactly.</Text>
-          <TextInput
-            style={st.input}
-            value={input}
-            onChangeText={setInput}
-            keyboardType="number-pad"
-            autoFocus
-            maxLength={config.digits + 2}
-            placeholder={'•'.repeat(config.digits)}
-            placeholderTextColor="rgba(255,255,255,0.25)"
-            returnKeyType="done"
-            onSubmitEditing={submitAnswer}
-          />
-          <Pressable
-            style={[st.startBtn, { backgroundColor: input.trim().length > 0 ? ACCENT : 'rgba(255,255,255,0.12)' }]}
-            disabled={input.trim().length === 0}
-            onPress={submitAnswer}
-          >
-            <Text style={st.startBtnTx}>Submit</Text>
-          </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
+
+          <View style={st.slotRow}>
+            {slots.map((ch, i) => {
+              const filled = ch.length > 0;
+              return (
+                <View
+                  key={i}
+                  style={[
+                    st.slot,
+                    {
+                      width: Math.max(28, Math.min(56, (screenWidth - 40 - (config.digits - 1) * 8) / config.digits)),
+                      borderColor: filled ? ACCENT : 'rgba(255,255,255,0.18)',
+                      backgroundColor: filled ? ACCENT + '1A' : 'rgba(255,255,255,0.04)',
+                    },
+                  ]}
+                >
+                  <Text style={[st.slotTx, { fontSize: inputFontSize }]}>{ch || '·'}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        <NumberPad
+          onDigit={handlePadPress}
+          onDelete={handlePadDelete}
+          onSubmit={submitAnswer}
+          canSubmit={input.length === config.digits}
+        />
+      </View>
     );
   }
 
@@ -248,7 +418,13 @@ export function EyeSightSession({ session }: Props) {
           </View>
           <Text style={st.title}>Correct!</Text>
           <Text style={st.sub}>Round {round} cleared · {config.digits} digits</Text>
-          <Text style={[st.title, { color: Colors.green, fontSize: 36, marginTop: 4 }]}>{target}</Text>
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            style={[st.title, { color: Colors.green, fontSize: 36, marginTop: 4 }]}
+          >
+            {target}
+          </Text>
           <Pressable style={[st.startBtn, { backgroundColor: ACCENT }]} onPress={continueAfterCorrect}>
             <Text style={st.startBtnTx}>Next Round</Text>
           </Pressable>
@@ -268,8 +444,14 @@ export function EyeSightSession({ session }: Props) {
           </View>
           <Text style={st.title}>Not quite!</Text>
           <Text style={st.sub}>The number was</Text>
-          <Text style={[st.title, { color: Colors.red, fontSize: 36, marginTop: 2 }]}>{target}</Text>
-          <Text style={[st.sub, { marginTop: 6 }]}>You typed {input.trim() || '—'}</Text>
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            style={[st.title, { color: Colors.red, fontSize: 36, marginTop: 2 }]}
+          >
+            {target}
+          </Text>
+          <Text style={[st.sub, { marginTop: 6 }]}>You typed {input || '—'}</Text>
 
           <View style={st.attemptList}>
             <View style={st.attemptRow}>
@@ -335,7 +517,7 @@ export function EyeSightSession({ session }: Props) {
         <ResultsScoreboard
           entries={entries}
           title={players.length > 1 ? 'Final Rankings' : 'Your Result'}
-          subtitle="Highest round wins"
+          subtitle={`Highest round wins · ${difficulty.name}`}
           onPlayAgain={playAgain}
           shareGameName="Eye Sight"
         />
@@ -355,11 +537,66 @@ function RuleRow({ num, color, text }: { num: number; color: string; text: strin
   );
 }
 
+interface NumberPadProps {
+  onDigit: (d: string) => void;
+  onDelete: () => void;
+  onSubmit: () => void;
+  canSubmit: boolean;
+}
+
+function NumberPad({ onDigit, onDelete, onSubmit, canSubmit }: NumberPadProps) {
+  const rows: (string | 'del' | 'submit')[][] = [
+    ['1', '2', '3'],
+    ['4', '5', '6'],
+    ['7', '8', '9'],
+    ['del', '0', 'submit'],
+  ];
+  return (
+    <View style={st.pad}>
+      {rows.map((row, ri) => (
+        <View key={ri} style={st.padRow}>
+          {row.map((cell) => {
+            if (cell === 'del') {
+              return (
+                <Pressable key="del" onPress={onDelete} style={[st.padKey, st.padKeyDim]}>
+                  <IconSymbol name="delete.left.fill" size={22} color="#fff" />
+                </Pressable>
+              );
+            }
+            if (cell === 'submit') {
+              return (
+                <Pressable
+                  key="submit"
+                  onPress={onSubmit}
+                  disabled={!canSubmit}
+                  style={[
+                    st.padKey,
+                    {
+                      backgroundColor: canSubmit ? ACCENT : 'rgba(90,200,250,0.25)',
+                    },
+                  ]}
+                >
+                  <IconSymbol name="checkmark" size={24} color="#fff" />
+                </Pressable>
+              );
+            }
+            return (
+              <Pressable key={cell} onPress={() => onDigit(cell)} style={st.padKey}>
+                <Text style={st.padKeyTx}>{cell}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   readyContent: { padding: 20, paddingBottom: 60, alignItems: 'center', gap: 14 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 12 },
-  fullCenter: { alignItems: 'center', justifyContent: 'center', gap: 12 },
+  fullCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 },
   iconBox: {
     width: 100, height: 100, borderRadius: 28,
     alignItems: 'center', justifyContent: 'center',
@@ -439,30 +676,86 @@ const st = StyleSheet.create({
   },
   flashNumber: {
     color: '#fff',
-    fontSize: 96,
     fontWeight: '900',
-    letterSpacing: 6,
     fontVariant: ['tabular-nums'],
     textShadowColor: 'rgba(90,200,250,0.6)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 32,
+    textAlign: 'center',
+    paddingHorizontal: 8,
   },
 
-  input: {
+  diffList: { width: '100%', gap: 10, marginTop: 6 },
+  diffCard: {
     width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 18,
+    padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(90,200,250,0.35)',
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-    color: '#fff',
-    fontSize: 36,
-    fontWeight: '800',
-    textAlign: 'center',
-    letterSpacing: 4,
-    fontVariant: ['tabular-nums'],
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  diffEmoji: { fontSize: 30 },
+  diffName: { color: '#fff', fontSize: 18, fontWeight: '800', marginBottom: 2 },
+  diffDesc: { color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '500' },
+
+  inputTop: {
+    paddingTop: 24,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    gap: 12,
+  },
+  slotRow: {
+    flexDirection: 'row',
+    gap: 8,
     marginTop: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+  },
+  slot: {
+    aspectRatio: 0.85,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 56,
+  },
+  slotTx: {
+    color: '#fff',
+    fontWeight: '900',
+    fontVariant: ['tabular-nums'],
+  },
+
+  pad: {
+    marginTop: 'auto',
+    padding: 12,
+    gap: 10,
+  },
+  padRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  padKey: {
+    flex: 1,
+    aspectRatio: 1.7,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  padKeyDim: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  padKeyTx: {
+    color: '#fff',
+    fontSize: 30,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
 
   attemptList: {

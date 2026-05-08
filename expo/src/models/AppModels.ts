@@ -248,7 +248,7 @@ export const Games: Record<string, GameType> = {
     symbolName: 'eye.circle.fill',
     supportedModes: [GameMode.singleDevice],
     roundDuration: 0,
-    heroImageURL: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/k3cminuuq79eca354ti5n.png',
+    heroImageURL: 'https://r2-pub.rork.com/generated-images/fc43eb16-1cbd-487b-a9d1-6d0c0d3ca830.png',
   },
   drawRush: {
     id: 'draw_rush',
