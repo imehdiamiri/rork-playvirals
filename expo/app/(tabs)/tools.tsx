@@ -16,7 +16,6 @@ import { LiquidGlass } from '@/src/components/LiquidGlass';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { CardCategoriesList } from '@/src/models/CardModels';
 import { PartyToolsSection } from '@/src/components/tools/PartyToolsSection';
-import { AIGeneratorPanel } from '@/src/components/AIGeneratorPanel';
 
 export default function ToolsScreen() {
   const insets = useSafeAreaInsets();
@@ -50,14 +49,6 @@ export default function ToolsScreen() {
 
         {/* Tools Section */}
         <PartyToolsSection showsHeader={false} />
-
-        {/* AI Generator — options live here too */}
-        <View style={styles.aiSectionWrapper}>
-          <AIGeneratorPanel
-            heroTitle={'Spin up a fresh\ngame in seconds'}
-            heroSubtitle="Pick a vibe, set the crew, drop a theme — AI cooks the rest."
-          />
-        </View>
 
         {/* Cards Section — distinct container */}
         <View style={styles.cardsSectionWrapper}>
@@ -163,12 +154,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  aiSectionWrapper: {
-    marginTop: 4,
-    marginBottom: 20,
-  },
   cardsSectionWrapper: {
-    marginTop: 4,
+    marginTop: 20,
     padding: 14,
     borderRadius: 24,
     overflow: 'hidden',
