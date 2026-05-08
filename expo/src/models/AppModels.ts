@@ -157,7 +157,7 @@ export const Games: Record<string, GameType> = {
     // Single-device only — multi-device sync not implemented for this game.
     supportedModes: [GameMode.singleDevice],
     roundDuration: 0,
-    heroImageURL: 'https://r2-pub.rork.com/generated-images/8e4ee454-2d44-46e7-9a28-c61f30c6a8be.png',
+    heroImageURL: 'https://r2-pub.rork.com/generated-images/78ece3a6-03a3-4a29-b6f8-4708d3aff9c0.png',
   },
   colorTrap: {
     id: 'color_trap',
@@ -188,7 +188,7 @@ export const Games: Record<string, GameType> = {
     symbolName: 'text.bubble.fill', // SF: text.bubble.fill
     supportedModes: [GameMode.singleDevice],
     roundDuration: 0,
-    heroImageURL: 'https://r2-pub.rork.com/generated-images/51b38902-55c2-4fd8-8c87-a327edf4f79b.png',
+    heroImageURL: 'https://r2-pub.rork.com/generated-images/859ba428-6157-4b18-8cc7-e9229340f35d.png',
   },
   spinBottle: {
     id: 'spin_bottle',
@@ -203,7 +203,7 @@ export const Games: Record<string, GameType> = {
     symbolName: 'arrow.triangle.2.circlepath', // SF: arrow.triangle.2.circlepath
     supportedModes: [GameMode.singleDevice],
     roundDuration: 0,
-    heroImageURL: null,
+    heroImageURL: 'https://r2-pub.rork.com/generated-images/628d85ef-8635-48bd-9682-7a413c26d6f7.png',
   },
   reactionTime: {
     id: 'reaction_time',

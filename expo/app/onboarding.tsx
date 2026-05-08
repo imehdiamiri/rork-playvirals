@@ -139,10 +139,9 @@ function ArtStage({ active, art, accent, glow }: { active: boolean; art: string;
   );
 }
 
-function HeroStage({ active, name }: { active: boolean; name: string }) {
+function HeroStage({ active }: { active: boolean }) {
   const float = useSharedValue(0);
   const enter = useSharedValue(0);
-  const heroName = name.trim() || 'HERO';
 
   useEffect(() => {
     if (active) {
@@ -171,12 +170,6 @@ function HeroStage({ active, name }: { active: boolean; name: string }) {
     ],
   }));
 
-  const badgeStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: interpolate(float.value, [0, 1], [0.97, 1.03], Extrapolate.CLAMP) },
-    ],
-  }));
-
   return (
     <Animated.View style={[styles.stageWrap, frameStyle]}>
       <View style={[styles.glowOrb, { shadowColor: Colors.orange }]}>
@@ -189,14 +182,6 @@ function HeroStage({ active, name }: { active: boolean; name: string }) {
       </View>
       <Animated.View style={[styles.artHolder, artStyle]}>
         <Image source={{ uri: ART.hero }} style={styles.artImage} resizeMode="contain" />
-      </Animated.View>
-      <Animated.View style={[styles.heroBadgeWrap, badgeStyle]} pointerEvents="none">
-        <LiquidGlass variant="high" radius={999} style={styles.heroBadgeInner} shadow>
-          <View style={styles.heroBadgeDot} />
-          <Text style={styles.heroBadgeText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
-            {heroName.toUpperCase()}
-          </Text>
-        </LiquidGlass>
       </Animated.View>
     </Animated.View>
   );
@@ -291,14 +276,20 @@ export default function OnboardingScreen() {
 
                 <View style={styles.stageContainer}>
                   {i === 3
-                    ? <HeroStage active={currentPage === 3} name={name} />
+                    ? <HeroStage active={currentPage === 3} />
                     : i === 2
                       ? <NameSticker active={currentPage === 2} name={name} setName={setName} inputRef={inputRef} accent={theme.accent} />
                       : <ArtStage active={currentPage === i} art={theme.art} accent={theme.accent} glow={theme.glow} />}
                 </View>
 
                 {!(i === 2 && keyboardVisible) && (
-                  <CopyBlock active={currentPage === i} eyebrow={theme.eyebrow} title={theme.title} subtitle={theme.subtitle} accent={theme.accent} />
+                  <CopyBlock
+                    active={currentPage === i}
+                    eyebrow={i === 3 && name.trim() ? `READY, ${name.trim().toUpperCase()}?` : theme.eyebrow}
+                    title={i === 3 && name.trim() ? `Let's go,\n${name.trim()}` : theme.title}
+                    subtitle={theme.subtitle}
+                    accent={theme.accent}
+                  />
                 )}
               </View>
             ))}
