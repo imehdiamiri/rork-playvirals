@@ -220,6 +220,21 @@ export const Games: Record<string, GameType> = {
     roundDuration: 0,
     heroImageURL: 'https://r2-pub.rork.com/generated-images/40580beb-1d0a-46b3-894c-d464e14c3efc.png',
   },
+  twoTruthsOneLie: {
+    id: 'two_truths_one_lie',
+    name: 'Two Truths One Lie',
+    shortDescription: 'Can you spot the lie? Each player tells two truths and one lie — the rest must guess which is which.',
+    minPlayers: 3,
+    maxPlayers: 12,
+    unlockCostStars: 0,
+    isFreeForever: true,
+    hasFreeTrial: false,
+    isPremium: false,
+    symbolName: 'hand.raised.fingers.spread.fill',
+    supportedModes: [GameMode.singleDevice],
+    roundDuration: 0,
+    heroImageURL: null,
+  },
   drawRush: {
     id: 'draw_rush',
     name: 'Draw & Rush',
@@ -250,6 +265,7 @@ export const GameLibrary: GameType[] = [
   Games.tapInOrder,
   Games.colorTrap,
   Games.drawRush,
+  Games.twoTruthsOneLie,
   Games.spinBottle,
   Games.reactionTime,
 ];
@@ -270,6 +286,7 @@ export const GamesDefinitions: GameDefinition[] = [
   { id: Games.tapInOrder, accentName: 'teal' },
   { id: Games.colorTrap, accentName: 'red' },
   { id: Games.drawRush, accentName: 'blue' },
+  { id: Games.twoTruthsOneLie, accentName: 'green' },
   { id: Games.spinBottle, accentName: 'purple' },
   { id: Games.reactionTime, accentName: 'green' },
 ];
