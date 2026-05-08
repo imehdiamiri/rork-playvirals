@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Platform, LayoutChangeEvent } from 'react-native';
+import { StyleSheet, View, Text, Image, ScrollView, TouchableOpacity, Platform, LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -39,10 +39,13 @@ export default function GamesScreen() {
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 6, paddingBottom: 120 }]} onLayout={(e: LayoutChangeEvent) => setContainerWidth(e.nativeEvent.layout.width - 32)}>
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
-            <View style={styles.logo} accessibilityLabel="PartyBot">
-              <Text style={[styles.logoText, styles.logoParty]}>Party</Text>
-              <Text style={[styles.logoText, styles.logoBot]}>Bot</Text>
-            </View>
+            <Image
+              source={{ uri: 'https://r2-pub.rork.com/generated-images/d401e9bf-01ae-407a-ac97-815f7e629435.png' }}
+              style={styles.logo}
+              resizeMode="contain"
+              accessibilityLabel="PartyBot"
+            />
+            <Text style={[styles.title, { display: 'none' }]}>PartyBot</Text>
           </View>
           <TouchableOpacity onPress={() => router.push('/lobby/join')} activeOpacity={0.85}>
             <LiquidGlass variant="high" radius={20} style={styles.joinButton} shadow={false}>
@@ -169,27 +172,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Viral-Black',
     fontSize: 25,
     color: 'white',
-  },
-  logo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    transform: [{ rotate: '-2deg' }],
-  },
-  logoText: {
-    fontFamily: 'Viral-Black',
-    fontSize: 34,
-    lineHeight: 40,
-    letterSpacing: 0.8,
-    textShadowColor: '#06101F',
-    textShadowOffset: { width: 3, height: 4 },
-    textShadowRadius: 0,
-  },
-  logoParty: {
-    color: '#FF1B86',
-  },
-  logoBot: {
-    color: '#58F000',
-    marginLeft: 2,
   },
   joinButton: {
     flexDirection: 'row',

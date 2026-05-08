@@ -11,7 +11,6 @@ import {
   Fredoka_600SemiBold,
   Fredoka_700Bold,
 } from '@expo-google-fonts/fredoka';
-import { Bangers_400Regular } from '@expo-google-fonts/bangers';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthStore } from '@/src/store/useAuthStore';
@@ -43,9 +42,9 @@ export default function RootLayout() {
   // Load unified rounded display font; aliased to legacy 'Viral-*' names so all
   // existing screens render the same chunky rounded face on iOS and Android.
   const [fontsLoaded] = useFonts({
-    'Viral-Black': Bangers_400Regular,
-    'Viral-Bold': Fredoka_700Bold,
-    'Viral-Regular': Fredoka_600SemiBold,
+    'Viral-Black': Fredoka_700Bold,
+    'Viral-Bold': Fredoka_600SemiBold,
+    'Viral-Regular': Fredoka_500Medium,
     'Fredoka_400Regular': Fredoka_400Regular,
     'Fredoka_500Medium': Fredoka_500Medium,
     'Fredoka_600SemiBold': Fredoka_600SemiBold,
