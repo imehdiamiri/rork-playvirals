@@ -73,6 +73,13 @@ export const GameInstructions: Record<string, string[]> = {
     "If you tap too early (while still red), it's a foul and you must try again.",
     "Each player gets 3 attempts and the best time counts.",
   ],
+  eye_sight: [
+    "A countdown of 3, 2, 1 prepares you for the next number.",
+    "A random number flashes on screen for a brief moment — watch carefully!",
+    "Type the number you saw as fast as you can and hit submit.",
+    "Correct answers advance you to the next round with more digits and shorter display time.",
+    "One wrong answer ends your turn — try to beat your high score!",
+  ],
   draw_rush: [
     "Each player takes turns as the drawer. Others guess.",
     "The drawer gets a secret word and 60 seconds to draw it.",

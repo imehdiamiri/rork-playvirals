@@ -235,6 +235,21 @@ export const Games: Record<string, GameType> = {
     roundDuration: 0,
     heroImageURL: null,
   },
+  eyeSight: {
+    id: 'eye_sight',
+    name: 'Eye Sight',
+    shortDescription: 'Numbers flash for a split second — memorize them and type them back. Each round gets harder.',
+    minPlayers: 1,
+    maxPlayers: 30,
+    unlockCostStars: 0,
+    isFreeForever: true,
+    hasFreeTrial: false,
+    isPremium: false,
+    symbolName: 'eye.circle.fill',
+    supportedModes: [GameMode.singleDevice],
+    roundDuration: 0,
+    heroImageURL: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/k3cminuuq79eca354ti5n.png',
+  },
   drawRush: {
     id: 'draw_rush',
     name: 'Draw & Rush',
@@ -268,6 +283,7 @@ export const GameLibrary: GameType[] = [
   Games.twoTruthsOneLie,
   Games.spinBottle,
   Games.reactionTime,
+  Games.eyeSight,
 ];
 
 export interface GameDefinition {
@@ -289,6 +305,7 @@ export const GamesDefinitions: GameDefinition[] = [
   { id: Games.twoTruthsOneLie, accentName: 'green' },
   { id: Games.spinBottle, accentName: 'purple' },
   { id: Games.reactionTime, accentName: 'green' },
+  { id: Games.eyeSight, accentName: 'cyan' },
 ];
 
 export const getPlayerCountText = (min: number, max: number): string => `${min}–${max} players`;

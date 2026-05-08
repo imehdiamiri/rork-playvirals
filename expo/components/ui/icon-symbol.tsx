@@ -45,6 +45,8 @@ const MAPPING = {
   'stopwatch.fill': 'timer',
   'theatermasks.fill': 'theater-comedy',
   'eye.fill': 'visibility',
+  'eye.circle.fill': 'remove-red-eye',
+  'eye.slash.fill': 'visibility-off',
   'square.grid.3x3.fill': 'grid-view',
   'map.fill': 'map',
   'paintpalette.fill': 'palette',

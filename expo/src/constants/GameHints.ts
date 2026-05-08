@@ -70,6 +70,12 @@ export const GAME_HINTS: Record<string, { icon: string; title: string; tip: stri
     tip: 'Wait for the screen to turn GREEN, then tap as fast as you can. Tap during RED and it\'s a foul!',
     accent: Colors.green,
   },
+  eye_sight: {
+    icon: 'eye.fill',
+    title: 'How Eye Sight Works',
+    tip: 'A number flashes for a split second. Memorize it and type it back exactly. Each correct round gets harder — one wrong answer ends your turn!',
+    accent: '#5AC8FA',
+  },
   draw_rush: {
     icon: 'pencil.tip.crop.circle',
     title: 'Draw & Rush',

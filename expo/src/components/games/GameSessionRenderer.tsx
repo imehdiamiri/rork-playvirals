@@ -18,6 +18,7 @@ import { ColorTrapSession } from './ColorTrapSession';
 import { SpinBottleSession } from './SpinBottleSession';
 import { DrawRushSession } from './DrawRushSession';
 import { ReactionTimeSession } from './ReactionTimeSession';
+import { EyeSightSession } from './EyeSightSession';
 
 interface Props {
   session: GameSession;
@@ -61,6 +62,8 @@ export function GameSessionRenderer({ session, game }: Props) {
       return withHint(game.id, <DrawRushSession session={session} />);
     case 'reaction_time':
       return withHint(game.id, <ReactionTimeSession session={session} />);
+    case 'eye_sight':
+      return withHint(game.id, <EyeSightSession session={session} />);
     default:
       return <GenericPlaceholder session={session} game={game} />;
   }
