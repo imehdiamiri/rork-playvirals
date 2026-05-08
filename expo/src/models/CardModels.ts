@@ -91,7 +91,7 @@ export interface PartyCard {
   isPremium?: boolean;
 }
 
-export const ALL_CARDS = ([
+export const ALL_CARDS: PartyCard[] = [
   { id: 'act-0', category: CardCategory.Act, subtype: CardSubtype.Pantomime, text: "Angry boss", isSpicy: false },
   { id: 'act-1', category: CardCategory.Act, subtype: CardSubtype.Pantomime, text: "Elephant", isSpicy: false },
   { id: 'act-2', category: CardCategory.Act, subtype: CardSubtype.Pantomime, text: "Driving a car in rush hour", isSpicy: false },
@@ -1232,4 +1232,4 @@ export const ALL_CARDS = ([
   { id: 'mlt-fut-37', category: CardCategory.MostLikelyTo, subtype: CardSubtype.MLTFutureSuccess, text: "write a screenplay that gets made", isSpicy: false },
   { id: 'mlt-fut-38', category: CardCategory.MostLikelyTo, subtype: CardSubtype.MLTFutureSuccess, text: "design something displayed in a museum", isSpicy: false },
   { id: 'mlt-fut-39', category: CardCategory.MostLikelyTo, subtype: CardSubtype.MLTFutureSuccess, text: "be remembered a hundred years from now", isSpicy: false },
-] as PartyCard[]);
+];
