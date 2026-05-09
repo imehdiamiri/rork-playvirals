@@ -1,16 +1,11 @@
-import React, { Suspense, lazy } from 'react';
+import React from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppBackgroundView } from '@/src/components/AppBackgroundView';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { CardCategoryInfo } from '@/src/models/CardModels';
-
-// Lazy-load the heavy 888-card deck renderer so opening a non-cards route
-// doesn't pay the parsing cost up-front.
-const CardsDeckRenderer = lazy(() =>
-  import('@/src/components/tools/CardsDeckRenderer').then((m) => ({ default: m.CardsDeckRenderer }))
-);
+import { CardsDeckRenderer } from '@/src/components/tools/CardsDeckRenderer';
 
 export default function CardsDeckScreen() {
   const { categoryId } = useLocalSearchParams<{ categoryId: string }>();
@@ -55,15 +50,7 @@ export default function CardsDeckScreen() {
         <View style={{ width: 38 }} />
       </View>
 
-      <Suspense
-        fallback={
-          <View style={styles.loadingFallback}>
-            <ActivityIndicator color={category.accentColor} />
-          </View>
-        }
-      >
-        <CardsDeckRenderer categoryId={categoryId as any} />
-      </Suspense>
+      <CardsDeckRenderer categoryId={categoryId as any} />
     </View>
   );
 }
@@ -98,10 +85,5 @@ const styles = StyleSheet.create({
     fontFamily: 'Viral-Black',
     fontSize: 20,
     color: 'white',
-  },
-  loadingFallback: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
