@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": [
-      "app.rork.cejfnhlng6nv3gg1g94ab",
+      "partybot",
       "invite"
     ],
     "userInterfaceStyle": "automatic",
@@ -14,12 +14,18 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.partybot",
+      "buildNumber": "1",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "PartyBot uses the microphone so you can record short voice clips for the Reverse Singing game. Recordings stay on your device and are never uploaded."
       }
     },
     "android": {
       "package": "com.partybot",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

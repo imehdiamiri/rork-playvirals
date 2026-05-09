@@ -18,6 +18,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { GlowView } from '@/src/components/ui/GlowView';
 import { usePaywallStore } from '@/src/store/usePaywallStore';
 import { showToast } from '@/src/components/ToastOverlay';
+import { AppConstants } from '@/src/constants/AppConstants';
 
 /**
  * PurchaseDetailScreen — detail sheet for a single RevenueCat package.
@@ -221,11 +222,11 @@ export default function PurchaseDetailScreen() {
         <Text style={styles.legalText}>{legal}</Text>
 
         <View style={styles.legalLinks}>
-          <TouchableOpacity onPress={() => Linking.openURL('https://www.playvirals.com/privacy')}>
+          <TouchableOpacity onPress={() => Linking.openURL(AppConstants.URLs.privacyPolicy)}>
             <Text style={styles.linkText}>Privacy Policy</Text>
           </TouchableOpacity>
           <Text style={styles.legalDot}>•</Text>
-          <TouchableOpacity onPress={() => Linking.openURL('https://www.playvirals.com/terms')}>
+          <TouchableOpacity onPress={() => Linking.openURL(AppConstants.URLs.termsOfService)}>
             <Text style={styles.linkText}>Terms of Service</Text>
           </TouchableOpacity>
         </View>

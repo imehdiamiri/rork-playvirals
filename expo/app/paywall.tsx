@@ -20,6 +20,7 @@ import { useEconomyStore } from '@/src/store/useEconomyStore';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { PurchasesPackage } from 'react-native-purchases';
 import * as Linking from 'expo-linking';
+import { AppConstants } from '@/src/constants/AppConstants';
 
 // Types and Enums
 enum PaywallTab {
@@ -278,11 +279,11 @@ export default function PaywallScreen() {
               Subscriptions auto-renew unless cancelled 24h before period end. Payment is charged to your Apple ID. Stars remain in your wallet after subscription ends.
             </Text>
             <View style={styles.legalLinksRow}>
-              <TouchableOpacity onPress={() => Linking.openURL('https://yourwebsite.com/privacy')}>
+              <TouchableOpacity onPress={() => Linking.openURL(AppConstants.URLs.privacyPolicy)}>
                 <Text style={styles.legalLink}>Privacy Policy</Text>
               </TouchableOpacity>
               <Text style={styles.legalDot}>•</Text>
-              <TouchableOpacity onPress={() => Linking.openURL('https://yourwebsite.com/terms')}>
+              <TouchableOpacity onPress={() => Linking.openURL(AppConstants.URLs.termsOfService)}>
                 <Text style={styles.legalLink}>Terms of Service</Text>
               </TouchableOpacity>
             </View>
