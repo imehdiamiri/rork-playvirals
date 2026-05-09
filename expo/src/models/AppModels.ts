@@ -87,9 +87,9 @@ export const Games: Record<string, GameType> = {
     minPlayers: 3,
     maxPlayers: 11,
     unlockCostStars: 0,
-    isFreeForever: true,
+    isFreeForever: false,
     hasFreeTrial: false,
-    isPremium: false,
+    isPremium: true,
     symbolName: 'theatermasks.fill', // SF: theatermasks.fill
     supportedModes: [GameMode.singleDevice],
     roundDuration: 0,
@@ -134,9 +134,9 @@ export const Games: Record<string, GameType> = {
     minPlayers: 2,
     maxPlayers: 30,
     unlockCostStars: 0,
-    isFreeForever: true,
+    isFreeForever: false,
     hasFreeTrial: false,
-    isPremium: false,
+    isPremium: true,
     symbolName: 'map.fill', // SF: map.fill
     // Single-device only until proper multi-device sync ships.
     supportedModes: [GameMode.singleDevice],
@@ -150,9 +150,9 @@ export const Games: Record<string, GameType> = {
     minPlayers: 1,
     maxPlayers: 30,
     unlockCostStars: 0,
-    isFreeForever: true,
+    isFreeForever: false,
     hasFreeTrial: false,
-    isPremium: false,
+    isPremium: true,
     symbolName: 'number.square.fill', // SF: number.square.fill -> roughly 123
     // Single-device only — multi-device sync not implemented for this game.
     supportedModes: [GameMode.singleDevice],
@@ -166,9 +166,9 @@ export const Games: Record<string, GameType> = {
     minPlayers: 1,
     maxPlayers: 30,
     unlockCostStars: 0,
-    isFreeForever: true,
+    isFreeForever: false,
     hasFreeTrial: false,
-    isPremium: false,
+    isPremium: true,
     symbolName: 'paintpalette.fill', // SF: paintpalette.fill
     // Single-device only — multi-device sync not implemented for this game.
     supportedModes: [GameMode.singleDevice],
@@ -182,9 +182,9 @@ export const Games: Record<string, GameType> = {
     minPlayers: 2,
     maxPlayers: 30,
     unlockCostStars: 0,
-    isFreeForever: true,
+    isFreeForever: false,
     hasFreeTrial: false,
-    isPremium: false,
+    isPremium: true,
     symbolName: 'text.bubble.fill', // SF: text.bubble.fill
     supportedModes: [GameMode.singleDevice],
     roundDuration: 0,
@@ -197,9 +197,9 @@ export const Games: Record<string, GameType> = {
     minPlayers: 3,
     maxPlayers: 12,
     unlockCostStars: 0,
-    isFreeForever: true,
+    isFreeForever: false,
     hasFreeTrial: false,
-    isPremium: false,
+    isPremium: true,
     symbolName: 'arrow.triangle.2.circlepath', // SF: arrow.triangle.2.circlepath
     supportedModes: [GameMode.singleDevice],
     roundDuration: 0,
@@ -242,9 +242,9 @@ export const Games: Record<string, GameType> = {
     minPlayers: 2,
     maxPlayers: 12,
     unlockCostStars: 0,
-    isFreeForever: true,
+    isFreeForever: false,
     hasFreeTrial: false,
-    isPremium: false,
+    isPremium: true,
     symbolName: 'pencil.and.scribble', // SF: pencil.and.scribble
     // Single-device only — the multi-device draft is not wired into useGameSync
     // and was removed from supported modes to avoid dead lobby flows.

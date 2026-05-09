@@ -291,3 +291,11 @@
 - [x] **Final missing rate limits**: `claimDailyReward` (10/h), `ensureInviteCode` (30/h), `syncRevenueCat` (30/h), `unblockUser` (60/h) now go through the existing `rateLimit()` helper in `functions/index.js`.
 - [x] **Admin reports `reviewed` toggle**: `actionSetReportStatus` server action + `setReportStatus` data helper added (`website/lib/{actions,data}.ts`); the status pill on `website/app/admin/reports/page.tsx` is now a submit button that flips pending↔reviewed and writes an `adminAuditLog` entry.
 - Note: room-creation / telemetry / multiplayer-action throttling still relies on RTDB rules (size + ownership) since those writes don't pass through Cloud Functions. Documented as acceptable for current scale; revisit if telemetry volume spikes.
+
+### Phase L15 — Premium-lock alignment audit
+- [x] **Premium gating fixed**: `expo/src/models/AppModels.ts` now flips `isPremium: true` / `isFreeForever: false` on the 7 games that should be paywalled per product spec: Ten Tangle, Memory Path, Pass & Guess, Tap in Order, Color Trap, Draw & Rush, Truth & Dare (Spin Bottle). Free games remain: Reverse Singing, Guess the Seconds, Imposter, Memory Grid, Reaction Time, Eye Sight.
+- [x] Game detail screen (`app/(tabs)/game/[id].tsx`) already enforces `gameDef.id.isPremium && !isPremium` → paywall card, so the new flags immediately gate access.
+- [x] Stars remain AI-only: `unlockCostStars: 0` across all games; no code path grants stars from match results.
+- [x] Audit confirmed no `tournament` / `practice mode` / `crypto withdrawal` / `gambling` / `Guess the Real Answer` references in `expo/src` or `expo/app`.
+- [x] Tabs left as-is per user direction (current Games / Tools / Friends / Factory preserved — Tools holds Cards + Party Tools, Factory is the AI Generator).
+- [x] runChecks passes.
